@@ -63,12 +63,18 @@ def evaluate(width: int, hot_capacity: int, n_requests: int = 8000, seed: int = 
     }
 
 
-def run(widths: list[int] | None = None) -> list[dict[str, Any]]:
+def run(
+    widths: list[int] | None = None, seeds: list[int] | None = None
+) -> list[dict[str, Any]]:
     widths = widths or [1 << 9, 1 << 11, 1 << 13, 1 << 15]
+    seeds = seeds or [0, 1, 2]
     rows: list[dict[str, Any]] = []
     for width in widths:
         for hot_capacity in (1, 1024):
-            rows.append(evaluate(width=width, hot_capacity=hot_capacity))
+            for seed in seeds:
+                row = evaluate(width=width, hot_capacity=hot_capacity, seed=seed)
+                row["seed"] = seed
+                rows.append(row)
     write_csv("e1_accounting", rows)
     write_json(
         "e1_accounting_meta",

@@ -51,3 +51,29 @@ def test_coordinator_allows_within_cap():
         ok, _ = coordinator.try_reserve(f"tx{i}", "t", f"p{i%3}", {"s": CostVector(eps_pure=0.1)})
         assert ok
         coordinator.commit(f"tx{i}")
+
+
+def test_coordinator_reservation_is_atomic():
+    import threading
+
+    from privfuse.dp.cost import CostVector
+    from privfuse.ledger.ledger import Coordinator
+
+    coordinator = Coordinator(caps={"s1": 1.0}, ttl=1000.0)
+    cost = CostVector(eps_pure=0.01, rho=0.0, delta=0.0)
+    admitted = []
+
+    def worker(k: int) -> None:
+        for i in range(200):
+            ok, _ = coordinator.try_reserve(f"t{k}-{i}", "ten", "p0", {"s1": cost})
+            if ok:
+                admitted.append(i)
+
+    threads = [threading.Thread(target=worker, args=(k,)) for k in range(8)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert coordinator.ledger.committed("s1").eps(1e-5) <= 1.0 + 1e-9
+    assert len(admitted) == 100

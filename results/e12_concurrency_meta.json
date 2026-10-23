@@ -1,0 +1,4 @@
+{
+  "cost_eps": 0.01,
+  "note": "throughput uses disjoint subjects; atomicity shares one subject"
+}

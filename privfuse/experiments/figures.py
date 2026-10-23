@@ -162,9 +162,116 @@ def fig_e8() -> pathlib.Path | None:
     return _save(fig, "fig7_scale")
 
 
+def fig_e9() -> pathlib.Path | None:
+    frame = _load("e9_sensitivity")
+    if frame is None:
+        return None
+    factors = list(dict.fromkeys(frame["factor"]))
+    fig, axes = plt.subplots(2, 3, figsize=(9, 4.6))
+    for ax, factor in zip(axes.ravel(), factors):
+        block = frame[frame["factor"] == factor]
+        values = list(dict.fromkeys(block["value"]))
+        x = range(len(values))
+        for policy, marker in (("privfuse", "o"), ("static_quota", "s")):
+            series = block[block["policy"] == policy]
+            means = [series[series["value"] == v]["availability"].mean() for v in values]
+            ax.plot(x, means, marker=marker, label=policy)
+        ax.set_xticks(list(x))
+        ax.set_xticklabels([f"{v:g}" for v in values], fontsize=7)
+        ax.set_title(factor, fontsize=9)
+        ax.set_ylim(0.6, 1.02)
+        ax.tick_params(labelsize=7)
+    axes[0, 0].set_ylabel("availability")
+    axes[1, 0].set_ylabel("availability")
+    axes[0, 0].legend(fontsize=7)
+    return _save(fig, "fig8_sensitivity")
+
+
+def fig_e10() -> pathlib.Path | None:
+    frame = _load("e10_accountant")
+    if frame is None:
+        return None
+    fig, axes = plt.subplots(1, 3, figsize=(9, 3), sharey=True)
+    for ax, target in zip(axes, sorted(frame["target_eps"].unique())):
+        block = frame[frame["target_eps"] == target]
+        for backend, marker in (("zcdp", "o"), ("rdp_grid", "s"), ("basic", "^")):
+            series = block[block["backend"] == backend].sort_values("count")
+            ax.plot(series["count"], series["reported_eps"], marker=marker, label=backend)
+        ax.axhline(target, color="grey", linestyle=":", linewidth=1)
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_title(f"target eps={target:g}", fontsize=9)
+        ax.set_xlabel("queries")
+    axes[0].set_ylabel("reported eps")
+    axes[0].legend(fontsize=7)
+    return _save(fig, "fig9_accountant")
+
+
+def fig_e11() -> pathlib.Path | None:
+    frame = _load("e11_utility")
+    if frame is None:
+        return None
+    epsilons = sorted(frame["epsilon_per_query"].unique())
+    policies = ["unbounded", "static_quota", "privfuse"]
+    fig, ax = plt.subplots(figsize=(4.6, 2.9))
+    width = 0.26
+    for offset, policy in enumerate(policies):
+        block = frame[frame["policy"] == policy]
+        means = [
+            block[block["epsilon_per_query"] == eps]["accuracy"].mean() for eps in epsilons
+        ]
+        errors = [
+            block[block["epsilon_per_query"] == eps]["accuracy"].std(ddof=0)
+            for eps in epsilons
+        ]
+        ax.bar(
+            [i + (offset - 1) * width for i in range(len(epsilons))],
+            means,
+            width=width,
+            yerr=errors,
+            capsize=3,
+            label=policy,
+        )
+    ax.set_xticks(range(len(epsilons)))
+    ax.set_xticklabels([f"{eps:g}" for eps in epsilons])
+    ax.set_xlabel("epsilon per release")
+    ax.set_ylabel("test accuracy")
+    ax.set_ylim(0.4, 1.0)
+    ax.legend(fontsize=7)
+    return _save(fig, "fig10_utility")
+
+
+def fig_e12() -> pathlib.Path | None:
+    frame = _load("e12_concurrency")
+    if frame is None:
+        return None
+    block = frame[frame["mode"].str.startswith("throughput")]
+    fig, ax = plt.subplots(figsize=(4.0, 2.7))
+    for mode, marker in (("throughput_striped", "o"), ("throughput_global", "s")):
+        series = block[block["mode"] == mode].sort_values("threads")
+        ax.plot(series["threads"], series["ops_per_second"] / 1000, marker=marker, label=mode)
+    ax.set_xlabel("threads")
+    ax.set_ylabel("thousand reservations / s")
+    ax.set_xticks(sorted(block["threads"].unique()))
+    ax.legend(fontsize=7)
+    return _save(fig, "fig11_concurrency")
+
+
 def build_all() -> list[pathlib.Path]:
     produced = []
-    for builder in (fig_e1, fig_e2, fig_e4, fig_e5, fig_e7, fig_hysteresis, fig_e8):
+    for builder in (
+        fig_e1,
+        fig_e2,
+        fig_e4,
+        fig_e5,
+        fig_e7,
+        fig_hysteresis,
+        fig_e8,
+        fig_e9,
+        fig_e10,
+        fig_e11,
+        fig_e12,
+    ):
         path = builder()
         if path is not None:
             produced.append(path)

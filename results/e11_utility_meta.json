@@ -1,0 +1,8 @@
+{
+  "cap": 1.0,
+  "dataset": "sklearn.datasets.load_breast_cancer",
+  "delta": 1e-05,
+  "epoch_quota": 20,
+  "epochs": 3,
+  "max_queries": 100
+}

@@ -117,6 +117,12 @@ balance, which is the stand-in for a cross-chain budget root.
 > never exceeds the sum of its reservations, and reservations never exceed the
 > cap.
 
+The reservation check and the reservation write are one critical section,
+striped by subject rather than global, so two platforms reserving for different
+subjects do not serialise while two reserving for the same subject cannot both
+pass. `E12` hammers a single subject from sixteen threads and admits exactly the
+number of transactions that fit.
+
 The expiry sweep (`SettlementLedger.tick`) is what makes a crashed platform
 recoverable: the reservation dies on its own and the budget returns. E6 injects
 a crash between reserve and commit and checks that no double spend occurs and

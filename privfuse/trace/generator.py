@@ -51,9 +51,23 @@ def _subject_names(n: int) -> list[str]:
     return [f"s{i:06d}" for i in range(n)]
 
 
-def _zipf_subjects(rng: np.random.Generator, n_subjects: int, size: int, alpha: float) -> np.ndarray:
-    draws = rng.zipf(alpha, size=size)
-    return (draws - 1) % n_subjects
+def _zipf_subjects(
+    rng: np.random.Generator, n_subjects: int, size: int, alpha: float
+) -> np.ndarray:
+    """Draw subject ranks from a truncated Zipf law over 1..n.
+
+    `numpy.random.zipf` samples the untruncated law, and for alpha below 2 the
+    draws overflow into the 10^15 range; reducing those modulo the population
+    turns the tail into uniform noise and leaves a single artificial giant at
+    rank zero. Sampling the truncated law by inverse CDF keeps the intended
+    shape: a smooth head, a long tail, and no rank that dominates by accident.
+    """
+    ranks = np.arange(1.0, n_subjects + 1.0)
+    weights = ranks ** (-alpha)
+    cdf = np.cumsum(weights)
+    cdf /= cdf[-1]
+    u = rng.random(size=size)
+    return np.clip(np.searchsorted(cdf, u), 0, n_subjects - 1)
 
 
 def generate_trace(config: TraceConfig | None = None) -> Trace:

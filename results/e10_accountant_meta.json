@@ -1,0 +1,7 @@
+{
+  "delta": 1e-05,
+  "order_max": 512.0,
+  "order_min": 2.0,
+  "orders": 128,
+  "rdp_floor": 0.0225301868199026
+}

@@ -13,7 +13,12 @@ vector for reporting.
 
 from __future__ import annotations
 
+import threading
+import zlib
+from contextlib import contextmanager
+
 from dataclasses import dataclass
+from typing import Iterable
 from enum import Enum
 
 from privfuse.dp.cost import CostVector
@@ -150,6 +155,9 @@ class SettlementLedger:
     def remaining_eps(self, subject: str, cap_eps: float) -> float:
         return cap_eps - self.in_flight_eps(subject)
 
+    def get(self, tx_id: str) -> Reservation | None:
+        return self._reservations.get(tx_id)
+
     def state(self, tx_id: str) -> State | None:
         res = self._reservations.get(tx_id)
         return None if res is None else res.state
@@ -178,11 +186,54 @@ class Coordinator:
     defeats budget splitting across platforms.
     """
 
-    def __init__(self, caps: dict[str, float], ttl: float = 30.0, delta: float = 1e-5) -> None:
+    STRIPES = 64
+
+    def __init__(
+        self,
+        caps: dict[str, float],
+        ttl: float = 30.0,
+        delta: float = 1e-5,
+        striped: bool = True,
+    ) -> None:
         self.caps = dict(caps)
         self.delta = float(delta)
         self.ledger = SettlementLedger(ttl=ttl, delta=delta)
         self.rejections = 0
+        self.striped = bool(striped)
+        self._global = threading.RLock()
+        self._stripes = [threading.Lock() for _ in range(self.STRIPES)]
+
+    def _index(self, subject: str) -> int:
+        return zlib.crc32(subject.encode("utf-8")) % self.STRIPES
+
+    @contextmanager
+    def _guard(self, subjects: Iterable[str]):
+        if not self.striped:
+            with self._global:
+                yield
+            return
+        indices = sorted({self._index(subject) for subject in subjects})
+        for index in indices:
+            self._stripes[index].acquire()
+        try:
+            yield
+        finally:
+            for index in reversed(indices):
+                self._stripes[index].release()
+
+    @contextmanager
+    def _guard_all(self):
+        if not self.striped:
+            with self._global:
+                yield
+            return
+        for lock in self._stripes:
+            lock.acquire()
+        try:
+            yield
+        finally:
+            for lock in reversed(self._stripes):
+                lock.release()
 
     def cap_for(self, subject: str) -> float:
         if subject not in self.caps:
@@ -197,24 +248,33 @@ class Coordinator:
         costs: dict[str, CostVector],
         now: float = 0.0,
     ) -> tuple[bool, str]:
-        for subject, cost in costs.items():
-            remaining = self.ledger.remaining_eps(subject, self.cap_for(subject))
-            if cost.eps(self.delta) > remaining + 1e-12:
-                self.rejections += 1
-                return False, f"insufficient budget for subject {subject}"
-        self.ledger.reserve(tx_id, tenant, costs, now=now, platform=platform)
-        return True, "reserved"
+        with self._guard(costs):
+            for subject, cost in costs.items():
+                remaining = self.ledger.remaining_eps(subject, self.cap_for(subject))
+                if cost.eps(self.delta) > remaining + 1e-12:
+                    self.rejections += 1
+                    return False, f"insufficient budget for subject {subject}"
+            self.ledger.reserve(tx_id, tenant, costs, now=now, platform=platform)
+            return True, "reserved"
 
     def commit(self, tx_id: str, now: float = 0.0) -> None:
-        self.ledger.commit(tx_id, now=now)
+        reservation = self.ledger.get(tx_id)
+        subjects = list(reservation.costs) if reservation is not None else []
+        with self._guard(subjects):
+            self.ledger.commit(tx_id, now=now)
 
     def release(self, tx_id: str, now: float = 0.0) -> None:
-        self.ledger.release(tx_id, now=now)
+        reservation = self.ledger.get(tx_id)
+        subjects = list(reservation.costs) if reservation is not None else []
+        with self._guard(subjects):
+            self.ledger.release(tx_id, now=now)
 
     def tick(self, now: float) -> int:
-        return self.ledger.tick(now)
+        with self._guard_all():
+            return self.ledger.tick(now)
 
     def stats(self) -> dict[str, float]:
-        stats = self.ledger.stats()
-        stats["coordinator_rejections"] = float(self.rejections)
-        return stats
+        with self._guard_all():
+            stats = self.ledger.stats()
+            stats["coordinator_rejections"] = float(self.rejections)
+            return stats

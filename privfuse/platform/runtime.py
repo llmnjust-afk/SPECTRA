@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 import time
 from dataclasses import dataclass, field
 from typing import Iterable, Sequence
@@ -87,6 +88,8 @@ class Market:
         caps: dict[str, float],
         platforms: Sequence[str] = ("p0", "p1", "p2"),
         delta: float = 1e-5,
+        crash_probability: float = 0.0,
+        seed: int = 0,
     ) -> None:
         self.policy = policy
         self.caps = caps
@@ -95,6 +98,8 @@ class Market:
             name: TradingPlatform(name=name, policy=policy) for name in platforms
         }
         self.truth = ExactAccountant()
+        self.crash_probability = float(crash_probability)
+        self._rng = random.Random(seed)
 
     def run(self, requests: Iterable[QueryRequest], tick_every: int = 512) -> RunResult:
         started = time.perf_counter()
@@ -104,6 +109,8 @@ class Market:
             platform = self.platforms.get(request.platform)
             if platform is None:
                 platform = self.platforms["p0"]
+            if self.crash_probability and self._rng.random() < self.crash_probability:
+                platform.crash_after_reserve = True
             try:
                 decision = platform.execute(request)
             except PlatformCrash:

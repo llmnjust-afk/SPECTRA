@@ -9,6 +9,10 @@ EXPERIMENTS = {
     "e6": "privfuse.experiments.e6_settlement",
     "e7": "privfuse.experiments.e7_ablation",
     "e8": "privfuse.experiments.e8_scale",
+    "e9": "privfuse.experiments.e9_sensitivity",
+    "e10": "privfuse.experiments.e10_accountant",
+    "e11": "privfuse.experiments.e11_utility",
+    "e12": "privfuse.experiments.e12_concurrency",
 }
 
 DEFAULT = [name for name in EXPERIMENTS if name != "e8"]
