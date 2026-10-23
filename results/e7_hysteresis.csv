@@ -1,0 +1,3 @@
+variant,transitions,flaps,reject_time
+hysteresis_on,0.0,0.0,0.0
+hysteresis_off,26.0,13.0,0.0

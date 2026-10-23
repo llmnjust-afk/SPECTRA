@@ -1,0 +1,15 @@
+{
+  "baseline_violations": 144.0,
+  "privfuse_violations": 0.0,
+  "seeds": [
+    1,
+    2,
+    3
+  ],
+  "splits": [
+    12,
+    24,
+    42,
+    60
+  ]
+}

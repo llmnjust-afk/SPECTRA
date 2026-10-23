@@ -1,0 +1,6 @@
+check,passed
+idempotent_commit,True
+timeout_releases,True
+idempotent_reserve_and_tenant_binding,True
+crash_leaves_no_double_spend,True
+expired_reservation_recovered,True

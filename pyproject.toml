@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "privfuse"
+version = "0.1.0"
+description = "Runtime privacy SLOs with composition-aware sketching for multi-tenant data trading systems"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "SPECTRA project" }]
+keywords = ["differential-privacy", "data-trading", "privacy-accounting", "sketch", "slo"]
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "matplotlib>=3.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov>=5.0"]
+
+[project.scripts]
+privfuse = "privfuse.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["privfuse*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

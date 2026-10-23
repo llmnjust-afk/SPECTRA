@@ -1,0 +1,11 @@
+{
+  "variants": [
+    "full",
+    "no_hot_table",
+    "no_hysteresis",
+    "no_degradation",
+    "narrow_sketch",
+    "wide_sketch",
+    "exact_global"
+  ]
+}
