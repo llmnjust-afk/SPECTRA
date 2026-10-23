@@ -238,3 +238,129 @@ exact blocking 从 1.69 抬到 1.76——因为更小的请求更便宜，能从
 一个单协调器原型、无共识、无副本，E13 恰恰量化了这一上限；(ii) 评估以
 合成人群为主，缺少真实 trace 与与已发表系统的端到端对比。这两点无法靠
 改写解决，只能靠新的实现与测量，已在限制一节如实交代。
+
+## K. 第二轮复审（2026-10-23）的修复
+
+第二轮复审给出 Borderline / Weak Reject，列了 R1–R6 与 S1–S7。逐条核对的结果：
+R1、R3 是真实的实现缺陷，R2、R5、S1–S7 是文本/数字问题，R6 是既有局限。
+
+**R1（真实且比复审描述的更严重）— 交易号可以重绑定。** 复审说"同一 tx 号
+换 payload 会被静默复用"。复现确认：`try_reserve("tx7","t","p0",{alice:0.1})`
+之后再 `try_reserve("tx7","t","p0",{bob:0.9})` 返回 `(True,'reserved')`，
+提交后只扣 alice 0.1 —— 平台执行了 bob 的查询而向 alice 收费，等于一次
+无扣费的答案，即硬上限绕过。原因：`SettlementLedger.reserve` 只比对 tenant 和
+platform。修复：`Reservation` 增加 `fingerprint`，`reserve` 用
+sha256(canonical JSON of tenant, platform, sorted costs) 绑定；不一致时抛
+`LedgerError("... reused with a different charge")`，完全相同的重试仍然幂等
+（这是崩溃重放需要的）。E22 的平台侧 handler 原先对 `RESERVED` 直接放行、
+绕过了这项检查，现已改为一律经过 `try_reserve`，不一致回 `-`。
+新增 `tests/test_rebind.py`（4 个用例：同 payload 幂等、换 subject 拒绝、
+换 cost 拒绝、released/committed 终态）。论文 Algorithm 1 增加指纹比对与
+终态分支，§VII-I 的"refusal to re-bind a reserve"改为明确覆盖 payload。
+
+**R3（真实）— 估计器不随日志恢复。** `DurableLedger` 只重放 charge，
+`AdmissionController` 的 sketch/ring/hot table 在重启后是空的；硬上限仍然安全
+（账本精确），但窗口估计归零，Proposition 1 的"任何时刻都不低估"在重启点
+不成立。修复：`SettlementLedger.committed_reservations()` 按 `committed_at`
+排序返回已提交事务，`privfuse/ledger/recovery.py:rebuild_estimator` 把它们按
+原始时间戳喂回 accountant，`AdmissionController.recover()` 在工厂里对
+durable ledger 自动调用，`_e21_worker` 的重启路径同样经过它。E21 新增两列：
+`recovered_tx`（本次 391）与 `estimate_ge_truth`（1.0，即每个主体恢复后的
+估计都不低于已提交真值）。Proposition 1 与 §VI 各补一句限定与机制。
+
+**文本/数字修正。** R5：§VII-F 残留的 "553 MB resident against 5.8 MB"
+改为与全文一致的 1.2 GB / 10.6 MB。S1：Fig. 4 图例 "exact per-tenant" 改为
+"exact per-platform"，§VII-B 的"forty tenant budgets"改为正确的机制
+（每个平台各自计量，跨平台主体最多累积三倍 cap）。S2：逃逸比从向量的
+`spend_s(T)/E_s` 改为标量 `g(spend_s(T))/E_s`，并注明它是上界而非实测泄漏。
+S3：引言不再说 RDP "cannot calibrate small targets at all"，改为限定
+"$\alpha_{\max}=512$ 的网格无法校准"。S4：效用实验点名数据集（UCI
+breast-cancer，569 条 × 30 特征）。S6：热表"exactly"补上"since admission"。
+S7：$\beta$ 缩放改为"高斯噪声 $1/\sqrt{\beta}$，Laplace 噪声 $1/\beta$"。
+
+**复审中不成立的部分（保留原文）。** R5 说 "1.5× faster (233 against 156 µs)"
+顺序颠倒——实测 PrivFuse 233 µs、exact 156 µs，233/156=1.49，原文正确。
+S6 的"exactly"原文四句后已给出 seeding 机制；S7 的 exactly-once 推论
+（"重复投递同一答案不重复收费"）原文并未主张，摘要写的是"charges each
+admitted query once"。R2 成立但属于已声明的局限（SLO 只监控热表），
+R6（单机）已在 §VI/§VIII 交代。
+
+**本轮验证。** 编译 11 页、0 错误、0 Overfull、0 `??`；`pytest` **56 passed**；
+E21/E22 重跑后 CSV 与正文数字一致（E21: 389 answers/0 free/0.191ε，
+recovered 391/estimate≥truth；E22: 760 answers/0 free/0 duplicate/0.38ε，
+稳态 221–238 answers/s，停机 1.05–1.22 s，故正文写 "about 230" 与 "≈1.1 s"）。
+文献仍为 35 = 35；PrivateKube 一条因 OpenAlex 429 未能核验，投稿前需重跑
+`ref_verify`。
+
+## L. 第三轮复审（模拟审稿，2026-10-23）——Borderline / Weak Reject
+
+**M1 人口级 SLO 没有真值。** 新增 E25：600 s trace、cap 0.5、24 个检查点，
+对**所有主体**重算精确窗口组合作为真值，与热表报告的受监控违规率对比。
+重尾（Zipf 1.15）下 $H\ge64$ recall 1.0、$H=8$ 0.95，受监控率与人口率三
+位小数一致；平坦分布（Zipf 0.6）且 $H=8$ 时 recall 0.014（71 个违规漏掉
+70 个），受监控率 0.000 对人口 0.002——因为违规者不再是 heavy hitter。把
+sketch 扫全 $N$ 个主体则两种分布 recall 均为 1.0（1 500 个主体中至多 2 次
+误报），代价是每 epoch $O(N)$。结论写进 §VII-D 与 §VIII：窗口 SLO 是
+**人口意义上的 best effort**，硬 cap 不是。
+
+**M2 因果链写错。** 摘要与引言原来说 "sketch 保证 spend 不被低估，因此
+cap 成立"。实际执行 cap 的是精确账本，sketch 只提供带符号的窗口压力信号。
+摘要、引言贡献、§III-A、§IV、§VI 统一改为"账本执行 cap，估计器只负责
+soft 信号"，并保留"估计器内存与人口无关"这一真正成立的结论。
+
+**M3 指纹与并发。** 三处真实缺陷：(a) 指纹只覆盖 tenant/platform/support/
+cost，同一 tx id 可以换成另一条 query 或另一个 mechanism 复用；(b) 同一
+id 的两个并发 reserve 若 support 不相交，各自只锁自己的 stripe，可能同时
+插入；(c) 已提交事务没有回执，重复 commit 可以改写答案。修复：指纹加入
+`query_digest`、`mechanism`、`policy_version`；新增 `_tx_guard(tx)` 在取
+stripe 之前按交易 id 加锁（避免锁序反转，>65 536 个 id 时清理）；`commit`
+接受 `receipt`，不一致则 `LedgerError`，一致则幂等返回原记录。`try_reserve`
+改为 fail-closed（`LedgerError` → 拒绝并计数 `rebinds`）。新增
+`tests/test_rebind.py` 共 7 例（含两线程、不相交 support、不同 query/mechanism、
+回执不匹配）。
+
+**M4 大规模只有 dense 基线。** 新增 E26（$N=10^6$、ring 4）：dense 30.5 MB
+（与活跃度无关），sparse exact 在 1/10/50/100% 活跃度下为 1.6/17.5/83.8/
+167.6 MB，sketch 2.7 MB；计入账本与 WAL 后总量为 41.6/141.6/585.9/1141.3 MB
+（dense）对 12.7/128.6/639.2/1278.4 MB（sparse）。**约 2% 活跃度是交叉点**：
+以下 sparse exact 更小且精确，10% 时 sketch 已小 6 倍。账本约 1.1 KB/已提交
+主体，满活跃度时结算状态本身 1.1 GB，估计器选择只改变总量的百分之几。论文
+如实写出"sketch 的价值在窗口状态，不在结算状态"。
+
+**M5 zCDP 与"1.0ε 可做 4 次"矛盾。** E11 改用 zCDP 定价（$\rho$ 反解、
+合成、$\sigma$ 由 $\rho$ 定），并修正方差偏差（$E[(m+\eta)^2]=m^2+\sigma^2$，
+$\sigma$ 公开故为 post-processing）。$\eps_q=1.0$ 只允许 1 次（消耗 1.000，
+acc $0.868\pm0.056$）；0.5 → 3 次（0.873，$0.840\pm0.064$）；0.25 → 15 次
+（0.983，$0.600\pm0.219$）。准入次数按 $1/\eps_q^2$ 增长，$\sqrt n$ 平均
+增益被 $1/\eps_q$ 噪声抵消，所以曲线随切分变细而**下降**；基线用 60/100 次
+查询换来 0.92–0.93，但每个种子都超支 2.0–12ε。§VII-H 补齐数据集、70/30
+分层、裁剪区间、敏感度 $3.4\times10^{-3}$、5 seeds。
+
+**M6 邻接/身份未定义。** §III-A 增加：主体是身份原子 $u$，数据集相邻 = 差
+一条记录，故跨平台同一主体对 $E_u$ 计费两次；身份解析在信任边界之外，协调
+器只接受平台记录索引给出的稳定假名，**缺身份的记录一律拒绝**——未知身份
+不是免费身份。同时 §VIII 明确"单机、loopback、无 RTT 注入"，E22 因此只
+支撑受信协调器原型，不支撑复制部署。
+
+**M7 p99 尾延迟来自周期性扫描。** 监控改为提交时增量更新每租户 $(total,
+violating)$ 计数器（$O(\text{ring})$），并在原位刷新；监控覆盖**每个被计费
+主体**，而不是热表。E17 同 trace 同机对比：sweep 均值 0.271–0.276 ms、
+p99 5.67–5.77 ms；增量均值 0.213–0.228 ms、**p99 0.93–1.05 ms**。队列模型
+（增量服务时间）：Poisson 50% 利用率 p50 0.26 ms / p99 160 ms；突发 50%
+p50 0.90 s。图注同步改写。
+
+**小项。** Prop 1 限定"正常运行与恢复完成后（重放期间不服务）"；Prop 3 更名
+"Single-charge settlement"（at-most-once delivery, exactly-once charging）；
+Atomicity 与"已提交才计费"对齐；Fig. 7 图注说明两臂为 sweep 与增量监控；
+§VII-I 的六个结算不变量写明指纹字段、按 id 加锁与回执重放。
+
+**版面。** 新增内容使论文涨到 12 页并溢出约 60 行。删除 Table II（故障矩阵
+并入正文）、Fig. 3（分裂攻击，文字保留数值）、Fig. 5（SLO 曲线，文字保留
+结论），压缩 Related/Discussion/Analysis/§VII-C..I，恢复 **11 页**（含参考文献），
+0 错误、0 Overfull、0 `??`；35 篇引用 = 35 条。
+
+**本轮验证。** `pytest` **59 passed**；E11/E17/E19/E21/E22 重跑，CSV 与正文
+一致（E21: 389 answers / 0 free / 0.191ε / recovered 391 / estimate≥truth；
+E22: 760 answers / 0 free / 0 duplicate / 0.3797ε，停机 1.06–1.22 s，稳态
+221–240 answers/s）。**仍未做**：跨主机/RTT 注入、Fabric 真实提交延迟、
+共识复制、账本元数据隐私；PrivateKube 一条仍需投稿前重跑 `ref_verify`。
