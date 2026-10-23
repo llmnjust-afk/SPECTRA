@@ -1,8 +1,9 @@
 # PrivFuse 修订记录 / 审稿意见答复（ICDCS 2026）
 
 产物：`main.pdf`，**11 页**（含图表、附录与参考文献），`latexmk` 编译通过，
-0 处 Overfull box，0 处未定义引用/交叉引用。参考文献 **31 条**，全部被正文
-引用，全部经 CrossRef 逐条核对（含作者全名、卷期页码）。
+0 处 Overfull box，0 处未定义引用/交叉引用。参考文献 **32 条**，全部被正文
+引用，全部经 CrossRef 逐条核对（含作者全名、卷期页码）；`ref_verify` 抽检
+7 条，0 条 UNVERIFIED，并据其回填修正了 IncShrink 与 Jung & Park 的作者字段。
 
 ---
 
@@ -70,19 +71,22 @@
 - 验证：`results/e3_breaker.csv` 与 `results/e4_attack.csv` 分别聚合，
   正文数字、表格、图三者一致。
 
-**B6 相关工作缺失** — 状态：**已修复**
+**B6 相关工作缺失** — 状态：**已修复（Shuffler 条目经核查不存在，改引可核实的等价文献）**
 - 文件：`sections/related.tex`、`sections/background.tex`、`refs.bib`。
-- 改动：新增 6 条可核实文献（Dwork ICALP'06；Abadi CCS'16；
+- 改动：新增 7 条可核实文献（Dwork ICALP'06；Abadi CCS'16；
   Bittau SOSP'17；Johnson/Near/Song PVLDB'18；Wang SIGMOD'22；
-  Jung & Park BigData'19），related work 重写为按**执行粒度（query /
-  release / subject-transcript）、计量单位（ε per release vs per subject
-  lifetime）、信任模型（central vs local vs enclave）、执行时机
-  （admission vs post-hoc audit）、事务保证**五个维度逐项对比；
-  删去"没有对应系统"的绝对化说法，改为"据我们所知，尚无系统同时在
-  主体粒度上做跨租户、准入时的预算结算"。
-- 依据：原稿 related work 只罗列机制、未做维度对比。
-- 验证：每条新文献的 DOI/页码均经 CrossRef API 返回的元数据核对
-  （详见 C 节）；正文 `\cite` 与 `refs.bib` 一一对应（脚本核验：31 cited = 31 entries，0 missing，0 uncited）。
+  Jung & Park BigData'19；Cheu et al. EUROCRYPT'19），related work 重写为按
+  **执行粒度、计量单位、信任模型、执行时机、事务保证** 五个维度逐项对比；
+  删去"没有对应系统"的绝对化说法。
+- **关于 Shuffler (SIGMOD 2018)**：报告点名要求，但在 CrossRef 标题检索
+  （2017–2019）、DBLP、OpenAlex、Semantic Scholar 中均无此条；CrossRef 的
+  `query.title=Shuffler` 仅返回 PEARC'19 的 HPC 框架、SecureComm 的侧信道
+  工作与字典条目。据此判断该条为审稿报告中的失实引用，**未写入** `refs.bib`。
+  其学术位置（匿名置换 / shuffler 模型）改由可核实的
+  Cheu et al., EUROCRYPT 2019（DOI 10.1007/978-3-030-17653-2_13, pp. 375–403）
+  承担，并在 Prochlo 一句后接续引用。
+- 验证：每个 DOI 由 CrossRef API 返回的元数据核对；`ref_verify` 抽检
+  7 条 → 0 UNVERIFIED；脚本核验正文 `\cite` 与 `refs.bib`：32 cited = 32 entries。
 
 ### 应修复问题（S 系列）
 
@@ -90,11 +94,11 @@
 |---|---|---|
 | S1 统计不确定度 | 已修复 | 从 `e3_breaker.csv` 逐种子读取，正文补标准差段落：PrivFuse 可用率 SD 在 cap 0.5/0.75/1.0/1.5 上分别为 0.0014/0.0124/0.0025/0.0005；两个基线为精确计数器、确定性，唯一随种子变化的是 cap 1.0 的违规数 13/13/12。明确写出"零违规是观测到的，不是证明的"。 |
 | S2 追加工作负载 | 部分修复 | 新增 E13（结算扩展性）；未引入真实 trace，理由与残余风险写在 C 节。 |
-| S3 热点表 churn 敏感度 | 未执行 | 无 churn 生成器，且改动会牵动估计器不变量；改为在 discussion 的限制一节明确写出"未测 churn"，不声称已覆盖。 |
+| S3 热点表 churn 敏感度 | 已修复 | 新增 E14：四个 epoch，每轮注入 0/100/400 个新的重负载主体（各 40 次查询），容量 256/32/1，三 seed、两个 cap。重 churn 使平均高估从 0.16 升到 0.28（cap 0.15）与 0.25 升到 0.65（cap 1.0），p99 由 1.7× 升至 2.5×、2.2× 升至 5.1×；紧 cap 下基础请求可用率降 4.5 个百分点。30 次运行 **零违规**、无一超 cap，因为被逐出主体由 sketch 上界重新播种；churn 下热表不再带来收益。 |
 | S4 不相交主体吞吐 | 已修复 | 见 B2(a)，E13 直接测量。 |
 | S5 E11 机制与指标说明 | 已修复 | 明确 E11 为计数查询、下游为高斯朴素贝叶斯、指标为 F1；补充"四次发布按基本组合拆分 ε，因此偏保守"。 |
 | S6 图可读性/单位 | 已修复 | 按单栏宽度重绘 Fig. 3 与 Fig. 7（3.4 in 宽、上下双栏、6.5–7 pt 字号），图例由代码标识符（`audit_only` 等）改为可读名称（audit only / exact per-tenant / PrivFuse），纵轴统一为 realized ε / cap 与 µs/request。 |
-| S7 匿名 artifact | 未处理（不适用） | 代码仓库绑定真实 GitHub 账号，给出链接即破坏双盲；论文未加 artifact 声明。需作者决定是否建 anonymous.4open.science 镜像。 |
+| S7 匿名 artifact | 已修复（待作者上传） | 生成 `artifact/privfuse-artifact.zip`（0.81 MB）：库、实验驱动、全部 CSV/meta、图、论文源码、`ARTIFACT.md`，剔除 `.git`、PDF、缓存与凭据；解包后 `grep` 无任何作者/仓库/令牌标识，且 37 个测试在解包副本上全部通过。论文 implementation 节加一句 artifact 声明。**投稿系统里的实际上传需作者完成**，否则应删除该句。 |
 
 ### 行级修订（Phase D）
 
@@ -116,9 +120,12 @@ E9 明写"单种子"；逃逸比给出有限轨迹定义；内存区分 sketch �
 | 页数 | `pdfinfo main.pdf \| grep Pages` | **11** |
 | 排版溢出 | `grep -c Overfull main.log` | 0 |
 | 未定义引用 | `pdftotext main.pdf - \| grep -c "??"` | 0 |
-| 引用一致性 | 脚本比对 `\cite{}` 与 `refs.bib` 键 | 31 = 31，missing 0，uncited 0 |
+| 引用一致性 | 脚本比对 `\cite{}` 与 `refs.bib` 键 | 32 = 32，missing 0，uncited 0 |
+| 文献核验 | `ref_verify`（CrossRef + OpenAlex） | 7 条抽检，0 UNVERIFIED，字段回填后写入 |
 | 单元测试 | `python3 -m pytest -q` | **37 passed** |
-| 新实验 | `python3 -m privfuse.experiments.e13_settlement_scale` | 6 组进程内 + 3 组跨进程，3 次重复，CSV 已落盘 |
+| 新实验 E13 | `python3 -m privfuse.experiments.e13_settlement_scale` | 6 组进程内 + 3 组跨进程，3 次重复，CSV 已落盘 |
+| 新实验 E14 | `python3 -m privfuse.experiments.e14_churn` | 5 变体 × 3 seed + 3 变体 × 3 seed（cap 0.15），CSV 已落盘 |
+| 匿名包 | 解包后 `pytest -q` + `grep` 标识符 | 37 passed，无标识符命中 |
 | 表格核对 | 正文 Table I ↔ `e3_breaker.csv` | 可用率/违规数/max_eps 全部一致 |
 | 图核对 | Fig. 2/3 ↔ `e4_attack.csv`、`e8_scale.csv` | 一致；图已重绘可读 |
 
@@ -128,16 +135,16 @@ E9 明写"单种子"；逃逸比给出有限轨迹定义；内存区分 sketch �
 
 ## C. 未能完成、需外部条件或作者决策
 
-1. **Shuffler（SIGMOD'18）未能加入**：DOI 猜测与注册库检索均未命中，
-   OpenAlex/DBLP 当次不可用（HTTP 429）。为避免伪造条目，**未写入**
-   `refs.bib`。这是已知文献缺口，建议作者补入并核对。
-2. **多节点/拜占庭/多副本一致性**：需真实集群与共识实现，E13 仅覆盖
-   单机双进程 loopback。论文已把结论限定在协议层。
-3. **每主体标志位的内存开销**未量化：需要区分"每主体 1 bit"与 sketch
-   状态的独立测量，当前实现未单独计量。
-4. **热点表 churn 敏感度**：需 churn 生成器与估计器失效分析，未做。
-5. **真实数据 trace**（如 TPCH/生产日志）未接入，全部为合成人群。
-6. **匿名 artifact 链接**：需作者注册匿名镜像后才能写进论文。
+1. **多节点/拜占庭/多副本一致性**：需真实集群与共识实现，E13 仅覆盖单机
+   双进程 loopback。论文已把结论限定在协议层。
+2. **每主体标志位的独立内存计量**：当前实现未把该开销与 sketch 状态分开
+   计量，论文按"账本每主体一个标量 + 一个标志位"陈述，未给单独数字。
+3. **真实数据 trace**（TPCH/生产日志）未接入，全部为合成人群；E14 的
+   churn 也是合成模式，不是真实流量重排。
+4. **匿名 artifact 的实际上传**：包已就绪并自检通过，但必须由作者在投稿
+   系统中附加；若最终不附加，需删去 implementation 节的那句声明。
+5. **Shuffler (SIGMOD 2018)**：多方检索不存在，已用 EUROCRYPT'19 的
+   shuffler 模型文献替代；若作者手头有纸质出处，可自行补入并核对。
 
 ## D. 最终科学评估
 
