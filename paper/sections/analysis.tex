@@ -15,17 +15,17 @@ the comparison is componentwise on $(\eps_{\mathrm{pure}},\rho)$.
 \end{proposition}
 
 \begin{IEEEproof}
-Fix a layer $j$ and let $T_j(x)$ be the true charge of key $x$. We maintain the
-invariant that for every key $x$, $\min_r A_j[r,h_{j,r}(x)]\ge T_j(x)$. It holds
-initially with all cells zero. On an update of key $x$ by $c$, the conservative
-rule sets each cell on $x$'s row to $\max(a,\,m+c)$ where $m\ge T_j(x)$ is the
-current row minimum, so every cell on that row becomes at least $T_j(x)+c$, and
-cells of other keys only increase. The invariant is preserved. A subject held in
+We maintain, for every layer $j$ and key $x$, the invariant
+$\min_r A_j[r,h_{j,r}(x)]\ge T_j(x)$ where $T_j$ is the true charge. It holds with
+all cells zero. On an update of $x$ by $c$, the conservative rule sets each cell on
+$x$'s row to $\max(a,\,m+c)$ with $m\ge T_j(x)$ the current row minimum, so every
+cell on that row becomes at least $T_j(x)+c$; cells of other keys only increase. The invariant is preserved. A subject held in
 the hot table is seeded with the sketch's bound at re-admission, hence at least
 $T_j(x)$ at that instant, and is then incremented exactly, so the invariant holds
 there too. The windowed estimate sums whole epochs that cover the window, each
 bounded below by its true charge, and charges are non-negative; hence the sum
-bounds the true windowed charge.
+bounds the true windowed charge, provided the ring holds at least
+$\lceil W/\ell\rceil+1$ epochs, which Section~\ref{sec:design-accountant} enforces.
 \end{IEEEproof}
 
 Over-estimation costs availability; Section~\ref{sec:eval-accuracy} measures 0.02\%
@@ -33,21 +33,31 @@ relative error for the top percentile and no false negatives in 24 configuration
 
 \begin{proposition}[Cap safety]
 \label{prop:safety}
-If every platform reserves through the shared coordinator before executing, then
-no admitted transcript produces $\spend_s(t)\succ E_s$ for any subject, even
-when tenants split their traffic across accounts and platforms.
+Assume that every platform reserves through the shared coordinator before a query
+executes, that the coordinator is the only writer of a subject's budget, and that
+the cost it charges is the cost of the mechanism the platform executes. Then, for
+every subject $s$ and time $t$, $C_s(t)+F_s(t)\preceq E_s$, the committed charge
+$C_s(t)$ is non-decreasing, $F_s(t)\succeq0$, and no executed query leaves
+$C_s(t)\succ E_s$---even when tenants split their traffic across accounts and
+platforms.
 \end{proposition}
 
 \begin{IEEEproof}
-Let $C_s(t)$ be the committed charge and $F_s(t)$ the reserved-but-uncommitted
-charge at time $t$. The coordinator admits only when
-$C_s(t)+F_s(t)+\cost(q)\preceq E_s$ for every subject in the support, and the check
-and the insertion occur under the same stripe guard, so no transaction interleaves
-between them. On commit $F_s$ decreases and $C_s$ increases by the same vector; on
-release $F_s$ decreases. Hence $C_s(t)+F_s(t)$ is non-decreasing and bounded by
-$E_s$, and the loss actually incurred is bounded by it. Splitting does not
-enter the argument because the key of every reservation is the subject, not the
-account or the platform.
+Let $C_s(t)$ be the committed charge and $F_s(t)$ the sum of live reservations.
+Admission of $q$ at time $t$ requires
+$C_s(t^-)+F_s(t^-)+\cost_{\mathrm{exec}}(q)\preceq E_s$ for every subject in the
+support, and the test and the insertion of the reservation happen under one stripe
+guard per subject, so no other transaction observes $C_s+F$ between them. A live
+reservation of $q$ then undergoes exactly one of three transitions. Commit moves
+$\cost_{\mathrm{exec}}(q)$ from $F_s$ to $C_s$, which leaves $C_s+F_s$ unchanged;
+release removes the same vector from $F_s$; expiry removes it as well. Hence
+$C_s(t)+F_s(t)\preceq E_s$ holds in every reachable state, $C_s$ never decreases
+and $F_s\succeq0$, because a reservation leaves $F_s$ the moment it is settled or
+expires. A query that executes carries a committed charge by
+Proposition~\ref{prop:atomic}, and is charged once, so the loss it incurs is
+counted in $C_s$ exactly once and cannot exceed $E_s$. Splitting does not enter
+the argument because the key of every reservation is the subject, not the account
+or the platform.
 \end{IEEEproof}
 
 \begin{proposition}[Exactly-once settlement]
@@ -87,8 +97,7 @@ rather than by the load, and removing hysteresis raises the count to 26.
 
 Two properties are deliberately absent. We do not prove that estimator error stays
 below a constant as the population grows, because the Count-Min guarantee is
-relative to total mass; we measure it instead. Nor do we prove that the SLO is met
-under every arrival process: the breaker is a feedback controller, and an abrupt
-load increase can drive pressure past the reject threshold before it reacts. What
-we prove is that the hard cap survives such a transient, because an exact structure
-enforces it.
+relative to total mass; we measure it instead. Nor do we prove that the SLO is met under
+every arrival process: the breaker is a feedback controller, and an abrupt load
+increase can drive pressure past the reject threshold before it reacts. The hard cap
+survives such a transient because an exact structure enforces it.

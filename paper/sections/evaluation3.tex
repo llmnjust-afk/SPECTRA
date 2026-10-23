@@ -1,35 +1,27 @@
 \subsection{Where Is the SLO Frontier?}
 \label{sec:eval-slo}
 
-An SLO has two knobs, the soft threshold $\alpha E$ and the tolerated violation
-rate $p$, and the interesting question is which pairs are achievable. Sweeping
-$\alpha$ from 0.55 to 0.95 at four values of $p$, holding everything else at the
-default, moves availability from 0.749 to 0.794 and raises the fraction of
-$(\alpha,p)$ settings at which the SLO is satisfied from 0.25 to 1.0. The
-hard-cap violation count is zero at every setting, including the tightest:
-tightening the soft target degrades throughput and never compromises the cap.
+Sweeping the soft threshold $\alpha$ from 0.55 to 0.95 at four values of $p$ moves
+availability from 0.749 to 0.794 and raises the fraction of $(\alpha,p)$ settings
+at which the SLO is satisfied from 0.25 to 1.0. The hard cap never moves: there are
+zero violations at every setting, so tightening the soft target costs throughput
+and never soundness. The two knobs are not independent. At $\alpha{=}0.55$ the
+monitored violation rate is 2.2\%, so the SLO is met only if the operator accepts
+$p\ge5\%$; at $\alpha\ge0.85$ the rate is at most 0.22\% and the default $p{=}1\%$
+holds. Operators therefore choose between a tight target with a loose rate and a
+loose target with a tight rate, about 4.5 points of availability apart, but not a
+tight target with a tight rate: a small set of subjects crosses any threshold near
+zero whatever the admission policy.
 
-The two knobs are not independent. At $\alpha{=}0.55$ the monitored violation
-rate is 2.2\%, so the SLO is met only if the operator accepts $p\ge5\%$; at
-$\alpha{=}0.85$ and above the monitored rate is at most 0.22\% and the default
-$p{=}1\%$ is met. This gives operators a menu---a tight soft target with a loose
-violation rate, or a looser target with a strict rate, at a cost of about 4.5 points
-of availability---but not a tight target with a strict rate, which no policy can
-deliver on a heavy-tailed workload: a small set of subjects crosses any threshold
-near zero regardless of admission policy.
-
-The sensitivity sweep varies one factor at a time around the default, with a
-single seed per point. Two points are controls. With a single platform, static quota becomes sound
-(zero violations, worst spend $0.969\eps$), because a per-tenant quota on the only
-platform that exists is also a per-subject quota; with six platforms its worst spend
-rises to $1.859\eps$ while \sys\ stays at $0.825\eps$. These two points confirm
-that the baselines fail through aggregation rather than through an implementation
-defect. A heavier tail ($\alpha_{\mathrm{zipf}}{=}1.5$) costs 15 points of
-availability, from 0.936 to 0.783, because more traffic concentrates on the subjects
-whose budgets bind; 200 tenants cost 4 points, as more of them touch each subject
-between refreshes; shrinking the hot table to 64 entries costs 2 points; and moving
-$\delta$ from $10^{-6}$ to $10^{-4}$ raises availability from 0.920 to 0.941, since
-a larger $\delta$ converts the same $\rho$ to a smaller $\eps$. Crashes at
-probability 0.05 cost 1 point and produce no violations.
-Across all 19 points the violation count is zero
-and the estimator never under-estimates.
+The sensitivity sweep varies one factor at a time around the default and uses a
+single seed per point, so it locates trends rather than estimating their
+variability. Two points bracket the aggregation effect. With one platform, static
+quota becomes sound---zero violations, worst spend $0.969\eps$---because a
+per-tenant quota on the only platform is also a per-subject quota; with six
+platforms its worst spend rises to $1.859\eps$ while \sys\ stays at $0.825\eps$.
+A heavier tail ($\alpha_{\mathrm{zipf}}{=}1.5$) costs 15 points of availability,
+from 0.936 to 0.783; 200 tenants cost 4, as more of them touch each subject between
+refreshes; a 64-entry hot table costs 2; and moving $\delta$ from $10^{-6}$ to
+$10^{-4}$ raises availability from 0.920 to 0.941. Crashes at probability 0.05 cost
+one point and produce no violations. Across all 19 points the violation count is
+zero and the estimator never under-estimates.

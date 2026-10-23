@@ -2,26 +2,25 @@
 \label{sec:eval-enforce}
 
 Table~\ref{tab:enforce} reports the central comparison at six cap levels, each
-averaged over three seeds. Two rows of the table matter. At a cap of
-$\eps{=}1.0$, \sys\ admits 0.933 of requests and produces no hard-cap violation,
-while exact per-tenant blocking admits 0.978 and lets 12.7 subjects exceed the
-cap, the worst of them reaching $1.69\eps$. Static quota behaves similarly at
-0.956 availability and the same violation count. The baselines' counters are exact; the
-violations are caused by the key. A subject charged against forty tenant budgets
-can accumulate forty times the cap, and on this trace natural traffic is enough
-to push a dozen subjects past it without any adversary.
+averaged over three seeds. At a cap of $\eps{=}1.0$, \sys\ admits 0.933 of requests
+and produces no hard-cap violation, while exact per-tenant blocking admits 0.978 and
+lets 12.7 subjects exceed the cap on average, the worst of them reaching $1.69\eps$.
+Static quota behaves similarly at 0.956 availability and the same violation count.
+The baselines' counters are exact; the violations are caused by the key. A subject
+charged against forty tenant budgets can accumulate forty times the cap, and on this
+trace natural traffic is enough to push a dozen subjects past it without any
+adversary. The escape ratio of Fig.~\ref{fig:attack} reaches a similar number at
+$k{=}60$, but it measures spend against a fixed adversary budget rather than against
+the cap.
 
-The availability gap is the price of soundness and it is not constant. At a cap
-of $0.5\eps$ \sys\ admits 0.754 against 0.889 for exact blocking, a gap of 13.5
-points; at $0.75\eps$ the gap is 10.0 points; at $1.0\eps$ it is 4.5 points; and
-at $1.5\eps$ and above \sys\ reaches full availability while the baselines
-continue to violate. The gap shrinks as the cap loosens because the breaker's
-soft threshold, at $0.8E$, stops binding: when the natural traffic never
-approaches the soft threshold, \sys\ behaves like exact global accounting. The
-cap of $3.0\eps$ is a control: no policy violates it, because the trace's
-natural maximum is $2.01\eps$, which confirms that the baseline violations at
-tighter caps are a consequence of keying rather than an artefact of the
-accounting implementation.
+The availability gap is the price of soundness and it is not constant: 13.5 points
+at a cap of $0.5\eps$, 10.0 at $0.75\eps$, 4.5 at $1.0\eps$, and nothing at
+$1.5\eps$ and above, where \sys\ reaches full availability while the baselines keep
+violating. The gap shrinks as the cap loosens because the soft threshold at $0.8E$
+stops binding: when natural traffic never approaches it, \sys\ behaves like exact
+global accounting. The cap of $3.0\eps$ is a control---no policy violates it because
+the trace's natural maximum is $2.01\eps$---which confirms that the baseline
+violations at tighter caps come from the key and not from the accounting.
 
 \begin{table}[tb]
 \centering
@@ -47,27 +46,30 @@ Cap & Avail. & Viol. & Avail. & Viol. & Avail. & Viol. \\
 \end{tabular}
 \end{table}
 
+Three seeds bound the noise. \sys's availability has a standard deviation of at
+most 0.0025 at every cap except $0.75\eps$, where it is 0.012; the two baselines
+keep exact counters and are deterministic, so their only seed-dependent entry is
+the violation count at $1.0\eps$, which is 13, 13 and 12.
+
 Figure~\ref{fig:attack} turns to the adversary. Under a tenant that splits a
-fixed budget across $k$ identities, the escape ratio of audit-only and
-token-bucket policies rises linearly with $k$, from 1.07 at $k{=}12$ to 2.43 at
-$k{=}60$, because neither policy has a subject key and both therefore price each
-fragment against a fresh allowance. Static quota saturates at 1.30, which is the
-ratio of the number of tenants that can touch a subject to the cap; exact
-per-tenant blocking rises to 1.69 and then flattens for the same reason.
+fixed budget across $k$ identities, the escape ratio of audit-only and token-bucket
+policies rises linearly with $k$, from 1.07 at $k{=}12$ to 2.43 at $k{=}60$: neither
+has a subject key, so both price each fragment against a fresh allowance. Static
+quota saturates at 1.30, the ratio of tenants that can touch a subject; exact
+per-tenant blocking rises to 1.69 and flattens for the same reason.
 \sys\ is flat at 0.82 across the whole range, and exact global is flat at 0.98,
 because neither can be made to forget that the fragments concern the same
 subject. The flatness, not the level, is the result: the attack's only lever is
 the identity it uses, and identity is not part of the key.
 
-The comparison with exact global deserves scrutiny, because it is the strongest
-baseline and it is also sound. At $k{=}42$ it admits 0.929 against 0.923 for \sys,
-and it leaves 2\% of the cap unused against 18\%. The 18\% is the residue of the
-soft threshold: \sys\ throttles from $0.8E$ and throttled queries consume half a
-charge, so the worst subject ends below its cap rather than at it. What exact global
+The comparison with exact global deserves scrutiny: it is the strongest baseline
+and it is sound. At $k{=}42$ it admits 0.929 against 0.923 for \sys\ and leaves 2\% of the cap
+unused against 18\%. The 18\% is the residue of the soft threshold: \sys\ throttles
+from $0.8E$ and throttled queries consume half a charge, so the worst subject ends
+below its cap rather than at it. What exact global
 lacks is a window, a degradation path and an estimator whose memory does not grow
-with $N$. We therefore read Figure~\ref{fig:attack} as showing that subject keying
-is necessary and that \sys\ achieves it without the per-tenant escape ratios, not
-that \sys\ dominates exact global on every axis.
+with $N$. Figure~\ref{fig:attack} therefore shows that subject keying is necessary
+and that \sys\ achieves it, not that \sys\ dominates exact global on every axis.
 
 \begin{figure}[tb]
 \centering

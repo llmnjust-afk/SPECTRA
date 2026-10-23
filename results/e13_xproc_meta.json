@@ -1,0 +1,5 @@
+{
+  "note": "not a multi-node deployment; no consensus, replication or disk backend",
+  "server": "single Coordinator process, striped locks, in-memory ledger",
+  "transport": "loopback TCP, NODELAY, one reserve+commit round trip per op"
+}

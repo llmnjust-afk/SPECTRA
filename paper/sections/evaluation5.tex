@@ -2,29 +2,35 @@
 \label{sec:eval-concurrency}
 
 The settlement invariants are checked directly: a repeated commit charges once, a
-timeout releases the reservation, a repeated reserve returns the same reservation
-and cannot be re-bound to another tenant, a crash between reserve and commit
-leaves no double spend, and an expired reservation is recovered. All five pass.
-We report them because the failure they prevent is invisible in aggregate
-statistics: a lost charge does not change availability or utility, it only makes
-the next query admissible.
+timeout releases the reservation, a repeated reserve returns the same reservation and
+cannot be re-bound to another tenant, a crash between reserve and commit leaves no
+double spend, and an expired reservation is recovered. All five pass. We report them because the failure they prevent is invisible in aggregate
+statistics: a lost charge only makes the next query admissible. In
+the atomicity test, 16 threads issue 3{,}200 attempts against a subject whose cap
+funds exactly 100 charges; every thread count from 2 to 16 admits exactly 100, spends
+exactly $1.0\eps$, and records zero violations, so check-and-reserve is atomic in
+practice and not only in argument.
 
-The concurrency experiment is where our results are negative. In the atomicity
-test, 16 threads issue 3{,}200 attempts against a subject whose cap funds exactly
-100 charges. Every thread count from 2 to 16 admits exactly 100, spends exactly
-$1.0\eps$, and records zero violations, so check-and-reserve is atomic in practice
-and not only in argument. Throughput does not follow. Striped locking reaches
-71.9k operations per second on one thread, 67.3k on two and 49.6k on four, while a
-single global lock reaches 99.6k on one thread and 51.0k on four. Striping costs
-28\% of single-thread throughput, because acquiring several locks is dearer than
-acquiring one, and it does not recover the loss at four threads on a two-core
-host, where the global lock is not the bottleneck and CPython's interpreter lock
-is. We expected the striped design to win at four threads and it does not; the
-fair statement is that striping removes a serialisation point that would bind on
-a many-core host with a blocking storage backend.
+Throughput depends on the workload, and our earlier reading of it was too
+pessimistic. With every thread contending for one subject, striping buys nothing:
+four threads reach 21.4k reserve-and-commit operations per second against 26.5k
+for a single global lock, and even one thread is 28\% slower, 83k against 116k,
+because acquiring several locks costs more than acquiring one. With disjoint
+subjects the same code scales instead: four threads reach 91.5k operations per
+second against 25.2k for the global lock, a factor of 3.6, because a transaction
+now waits only for the stripes it touches (E13, medians of three repetitions). Striping removes a serialisation point, not contention: a market whose traffic
+concentrates on a few subjects will not benefit from it.
 
-Two caveats follow. The coordinator is a single process, so the numbers bound the
-protocol rather than a distributed deployment; a Fabric-backed ledger adds a round
-trip per commit, which we did not measure. And the throughput test uses one subject,
-maximising contention; a workload over disjoint subjects would exercise the stripes
-as intended.
+Threads cannot carry the coordinator past one interpreter, so we also served it
+over loopback TCP to separate client processes. One client sustains 1.9k
+reserve-and-commit pairs per second at a median round trip of 201\,$\mu$s; four
+clients sustain 2.4k at 283\,$\mu$s with a p99 of 16\,ms. The server saturates,
+so the limit is the coordinator's interpreter rather than the transport: a
+deployment that needs more must shard subjects across coordinators and replicate
+them, which we have not built. The measurement bounds what a remote settlement
+costs---roughly a quarter of a millisecond per query, and no more.
+
+Three caveats follow. The coordinator is one process, so the numbers bound the
+protocol rather than a deployment, and the cross-process test measures a loopback
+round trip, not a wide-area one. And a Fabric-backed ledger adds its own commit round trip, which we did not
+measure because the adapter is a stub (Section~\ref{sec:impl}).

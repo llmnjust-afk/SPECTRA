@@ -1,49 +1,45 @@
 \subsection{From a Cap to an SLO}
 \label{sec:design-slo}
 
-A cumulative cap alone produces the wrong behaviour at both ends. A tenant that
+A cumulative cap alone produces the wrong behaviour at both ends: a tenant that
 spends a subject's budget in the first hour gets full service for an hour and
-nothing thereafter; a tenant that spreads the same spend over thirty days gets
-uniform service. Neither is what the subject agreed to, and neither is
-predictable for the tenant. \sys\ therefore evaluates a population-level SLO:
+nothing thereafter, while one that spreads the same spend over thirty days gets
+uniform service. Neither is what the subject agreed to. \sys\ therefore evaluates a population-level SLO:
 over a window of length $W$, the fraction of monitored subjects whose spend
 exceeds $\theta_{\mathrm{soft}}=\alpha E$ must not exceed $p$, and no subject may
 exceed $E$. The default is $\alpha=0.8$, $p=0.01$, $W=600$\,s and $\ell=300$\,s
 epochs, so the ring holds three epochs.
 
-The monitor reads the windowed estimates of the hot table rather than of the
-whole population, on the argument that a subject outside the hot set has, by
-construction, accumulated less than the eviction threshold and cannot be the
-subject whose spend violates the soft threshold. This makes the monitor's cost
-independent of $N$ and concentrates attention where violations are possible, but
-it also means the reported rate is over the \emph{violation-capable}
-subpopulation rather than over all subjects. The tenant-level rate is refreshed
-every 64 evaluations, which bounds staleness at the cost of a lag between a
-change in behaviour and the breaker's response.
+The monitor reads the windowed estimates of the hot table rather than of the whole
+population, on the argument that a subject outside the hot set has, by construction,
+accumulated less than the eviction threshold and cannot be the subject whose spend
+violates the soft threshold. This keeps the monitor's cost independent of $N$ and
+concentrates attention where violations are possible, but the reported rate is over
+the \emph{violation-capable} subpopulation rather than over all subjects. The
+tenant-level rate is refreshed every 64 evaluations, bounding staleness at the cost
+of a lag between a change in behaviour and the breaker's response.
 
 The breaker is a four-level machine (normal, throttle, reject, freeze) that
 escalates immediately and de-escalates one level at a time. De-escalation
-requires pressure to fall below the current threshold by a margin $h$ and remain
-there for $d$ consecutive evaluations; the margin prevents oscillation when
-arrivals hover around a threshold, and the dwell prevents a single quiet
-evaluation from releasing a subject about to be charged again. In throttle mode
-the charge is scaled by $\beta=0.5$, which corresponds to inflating the noise by
-$1/\sqrt{\beta}$ and reduces utility; the tenant receives a lower-quality answer
-at a lower price rather than a refusal. This converts a hard wall into a
-degradation curve, and it is sound because the mechanism actually executed is the
-one charged for.
+requires pressure below the current threshold by a margin $h$ for $d$ consecutive
+evaluations: the margin prevents oscillation around a threshold, the dwell prevents
+one quiet evaluation from releasing a subject about to be charged again. In throttle
+mode the charge is scaled by $\beta=0.5$, which inflates the noise by
+$1/\sqrt{\beta}$; the tenant receives a lower-quality answer at a lower price rather
+than a refusal. This turns a hard wall into a degradation curve, and it is sound
+because the mechanism executed is the one charged for.
 
 \subsection{Two-Phase Settlement}
 \label{sec:design-settle}
 
-Reservation is all-or-nothing over the query's subject set. Under a guard that
-covers exactly the stripes of those subjects, the coordinator reads
+Reservation is all-or-nothing over the query's subject set. Under a guard covering
+exactly the stripes of those subjects, the coordinator reads
 $\mathrm{remaining}(s)=E_s-(\text{committed}(s)+\text{in-flight}(s))$ for every
-$s$ in the support and rejects the transaction if any subject lacks room;
-otherwise it records a reservation with a time-to-live. The check and the record
-happen under the same guard, so no other transaction can observe the budget
-between them. A rejection is therefore not a partial charge: either the query is
-reserved against every subject it touches, or it touches no budget at all.
+$s$ in the support and rejects if any subject lacks room; otherwise it records a
+reservation with a time-to-live. Check and record share the guard, so no other
+transaction observes the budget between them, and a rejection is not a partial
+charge: either the query is reserved against every subject it touches, or it
+touches no budget at all.
 
 Commit is idempotent in the transaction identifier. A repeated commit for an
 already-committed transaction increments a duplicate counter and returns the
@@ -59,7 +55,7 @@ Concurrency is handled by striping. Subjects map to $L=64$ stripes by a hash of
 the identifier, and a transaction acquires its subjects' stripes in sorted index
 order, which rules out deadlock and lets transactions over disjoint subjects
 proceed in parallel. A transaction spanning many subjects serialises against everything sharing its
-stripes---correct for a multi-subject query, and the reason our concurrency
-experiment shows no throughput win on a two-core host
-(Section~\ref{sec:eval-concurrency}). Striping is a scalability argument, not a
-measured speedup here.
+stripes, which is correct for a multi-subject query and is why striped and global
+locking behave alike when all traffic hits one subject. The difference appears
+when subjects are disjoint, and Section~\ref{sec:eval-concurrency} measures
+both.

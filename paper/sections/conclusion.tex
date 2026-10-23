@@ -13,8 +13,9 @@ subjects the estimator holds 4.7\,MB where exact accounting needs 265\,MB;
 enforcement admits 0.93 of requests at $1.0\eps$ with no violations where per-tenant
 blocking admits 0.98 and breaches the cap a dozen times; the escape ratio under a
 splitting tenant stays at 0.82 where policies without a subject key reach 2.43. The
-cost is measurable---about 4.5 points of availability at a tight cap, 4.2 without
-degradation, no throughput win from striping---and we report it alongside the gains.
+cost is measurable---4.5 points of availability at a tight cap, 4.2 without
+degradation, a striping benefit only for disjoint subjects---and we report it
+alongside the gains.
 The next step is to make the accounting state itself private, and to replace the
 trust we place in one coordinator with a proof that the charge matches the mechanism
 that ran.

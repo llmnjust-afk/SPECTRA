@@ -8,62 +8,54 @@ of answering online queries~\cite{bun2016make}. Tight auditing has become its ow
 line, from reconstruction attacks on production query systems~\cite{cohen2018linear}
 to Gaussian-DP audits of synthetic data generators~\cite{ganev2026tight} and
 analyses of the gap between provable and auditable privacy in
-DP-SGD~\cite{modi2026revisiting}. All of it asks how large the loss was; \sys\ asks
-whether the next release may happen, which has a different error budget. We do not
-improve a composition bound. We take a standard one, zCDP~\cite{bun2016concentrated},
-and make it cheap and monotone enough to sit on an admission path, alongside
-alternatives such as R\'enyi~\cite{mironov2017renyi} and Gaussian
-DP~\cite{dong2021rejoinder} whose relative merits we measure for that
-purpose~(Section~\ref{sec:eval-backend}).
+DP-SGD~\cite{modi2026revisiting}. All of it asks how large the loss was; \sys\ asks whether the next release may
+happen. We do not improve a composition bound: we take
+zCDP~\cite{bun2016concentrated} and make it cheap and monotone enough for an
+admission path, and measure R\'enyi~\cite{mironov2017renyi} and Gaussian
+DP~\cite{dong2021rejoinder} against it for that purpose.
 
 \emph{Systems that enforce privacy.} PINQ established the pattern of a query
-interface that charges a budget per analyst~\cite{ebadi2015featherweight}, and
-production libraries apply it to training~\cite{yousefpour2021opacus}. These
-systems enforce a budget per \emph{analyst} and assume the analyst is the unit of
-privacy. In a market the unit is the subject and the analyst is an adversary who
-can be several analysts, which is why the key and the cross-tenant aggregation
-matter more than the query language. Our settlement protocol has no counterpart in
-this line; the closest analogue is accounting in a database transaction.
+interface that charges a budget per analyst~\cite{ebadi2015featherweight}; Fuzzi and
+Flex turn it into a deployed SQL system with elastic sensitivity and per-query
+pricing~\cite{johnson2018towards}, and production libraries apply the same
+accountant to training~\cite{yousefpour2021opacus,abadi2016deep}. All three fix the
+accounting unit to the analyst, assume the analyst is the unit of privacy, and
+settle inside one administrative domain. Prochlo moves enforcement into an enclave
+and removes the trusted server, at the price of fixing the unit to the user and the
+granularity to a batch~\cite{bittau2017prochlo}; IncShrink combines MPC with DP so
+that an outsourced database never sees plaintext, at the price of a cryptographic
+protocol per query~\cite{wang2022incshrink}. None of them charges a \emph{subject}
+whose records sit on several platforms, and none treats the resulting counter as a
+transaction.
 
 \emph{Auditing and governance.} A parallel literature builds the machinery for
 post-market monitoring~\cite{mokander2021conformity} and ethics-based
-audit~\cite{mokander2021ethicsbased}, and empirical studies of organisational
-practice~\cite{kapp2024collection} show how far declared policy is from measured
-behaviour. Privacy-policy formalisms give declarations a
-semantics~\cite{majedi2024privacy}, and recent work extends governance to
-AI-mediated platforms~\cite{shouli2025ethical}. \sys\ is complementary: it assumes
-the declaration exists and makes it enforceable at the point of sale, and an
-auditor who can read a ledger of admissions need not infer what happened from the
-released artifacts.
+audit~\cite{mokander2021ethicsbased}, and empirical studies show how far declared
+policy is from measured behaviour~\cite{kapp2024collection}. Recent work
+extends governance to AI-mediated platforms~\cite{shouli2025ethical}. \sys\ assumes
+the declaration exists and makes it enforceable at the point of sale.
 
 \emph{Data markets.} Trustless trading has occupied the blockchain systems
 community, with recent designs scaling delivery and
 settlement~\cite{liu2025yotta} and provenance mechanisms tracking derived
 artifacts~\cite{zhu2025auditing}. These answer ``did I receive what I paid for?''.
-The privacy question---``may this answer be sold at all?''---is orthogonal and, in
-our reading of deployments, unaddressed: the ledger records payments, not budgets.
-We keep the ledger as the settlement substrate and add a budget root that every
-platform consults, the smallest change that lets the same infrastructure answer
-both questions.
+Pricing privacy itself has been studied as a negotiation between subject and
+buyer~\cite{jung2019privacy}, which presupposes a budget that can actually be spent
+and tracked. The privacy question---``may this answer be sold at all?''---is
+orthogonal and, in our reading of deployments, unaddressed: the ledger records
+payments, not budgets. We keep the ledger as the settlement substrate and add a
+budget root that every platform consults; we are not aware of prior work that makes
+the charge itself a two-phase transaction keyed by the subject across platforms.
 
-\emph{Approximate counting.} Count-Min sketches and their conservative variants
-are well understood~\cite{fusy2023countmin,fusy2022phase}, including on power-law
-streams and for external storage~\cite{goswami2018buffered}, and learned variants
-reduce error at the same width~\cite{nishishita2025optimized}. Our use is unfashionable: we want not the smallest error but an error
-with a known sign, which rules out unbiased estimators and makes the conservative
-update the right primitive rather than an optimisation.
+\emph{Approximate counting.} Count-Min sketches and their conservative variants are
+well understood~\cite{fusy2023countmin,fusy2022phase}, including on power-law
+streams, and learned variants reduce error at the same width~\cite{nishishita2025optimized}.
+Our use is unfashionable: we want not the smallest error but an error with a known
+sign, which rules out unbiased estimators and makes the conservative update the
+right primitive rather than an optimisation.
 
-\emph{Heterogeneous budgets and mechanisms.} Charging subjects different budgets is
-a recognised generalisation~\cite{alaggan2015heterogeneous}, and per-subject
-constraints appear in genomic query answering~\cite{jiang2022answering} and
-distance-preserving transformations~\cite{kenthapadi2012privacy}; these establish
-that per-subject accounting is meaningful, not how to maintain it across tenants at
-market scale. The answers \sys\ prices come from standard mechanisms, from DP
-synthesis~\cite{saha2024dpcda} to spectral perturbation~\cite{feng2023spectraldp},
-geometric preconditioning~\cite{bosch2026dpkfc,duan2025technical}, federated
-training~\cite{han2022momentum} and private sensing~\cite{beugin2022building}.
-We assume only that each query exposes a cost vector, as all of these do in some
-form; calibrating to data~\cite{proserpio2012calibrating}, releasing under a
-sensitivity budget~\cite{hardt2010simple} or handling high-sensitivity queries
-through concentration~\cite{nissim2017concentration} changes the vector, not the
-enforcement layer.
+\emph{Mechanisms.} We assume only that each query exposes a cost vector, which is
+what every mechanism we price provides: DP synthesis~\cite{saha2024dpcda}, spectral
+perturbation~\cite{feng2023spectraldp}, geometric
+preconditioning~\cite{bosch2026dpkfc,duan2025technical}. How the vector is produced
+changes the vector, not the enforcement layer.

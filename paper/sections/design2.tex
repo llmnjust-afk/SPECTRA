@@ -12,8 +12,9 @@ are the subjects whose budgets bind.
 For key $s$ and cost $c$, the conservative update computes
 $m_j=\min_{r} A_j[r,h_{j,r}(s)]$ per layer and raises every cell on $s$'s row
 that falls below $m_j+c_j$ to $m_j+c_j$; the estimate is the minimum over rows.
-The rule never decreases a cell and never increases an estimate, which is the
-property we need. Standard Count-Min with plain increments also over-estimates,
+The rule never decreases a cell and never decreases an estimate, which is the
+property we need; raising a cell can raise a colliding key's estimate, which costs
+availability and never soundness. Standard Count-Min with plain increments also over-estimates,
 but conservative update keeps the estimate closer to the truth for the same width
 by refusing to charge collisions that the minimum already accounts
 for~\cite{fusy2022phase,fusy2023countmin}. With $d=\lceil\ln(1/\delta_s)\rceil$
@@ -31,16 +32,13 @@ excess at most the sketch's error at the moment of eviction. Seeding from below,
 for instance with the point estimate minus one standard deviation, would restore
 accuracy at the cost of soundness, and we do not do it.
 
-The epoch ring is sized so that a window is always covered. With epochs of length
-$\ell$ and a ring of $R$ epochs, a window straddling a boundary spans at most
-$\lceil W/\ell\rceil+1$ epochs, so we require $R\ge\lceil W/\ell\rceil+1$ and set
-the ring size to exactly that bound. An earlier version used
-$R=\lceil W/\ell\rceil$, which silently dropped the oldest epoch of every
-straddling window and made the windowed estimate an under-estimate by up to one
-epoch of traffic. The fix is one line, but it is the difference between a
+The epoch ring is sized so that a window is always covered: a window straddling a
+boundary spans at most $\lceil W/\ell\rceil+1$ epochs, so $R$ is set to exactly that
+bound. An earlier version used $\lceil W/\ell\rceil$, which silently dropped the
+oldest epoch of every straddling window and made the estimate an under-estimate by
+up to one epoch of traffic. The fix is one line, but it is the difference between a
 one-sided estimator and one that is not, and it is the kind of error a purely
-cumulative test suite does not catch. Summing per-epoch bounds is itself a bound,
-so the ring preserves one-sidedness without further argument.
+cumulative test suite does not catch.
 
 Total state is $O(dw)$ for the cumulative layer, $O(Rdw)$ for the ring and $O(H)$
 for the hot table, none of which depends on $N$. The default uses $w=2^{14}$, $d=4$,
@@ -48,5 +46,4 @@ $R=3$ and $H=1024$, occupying 4.7\,MB at $10^6$ subjects and not growing when th
 population doubles. The price is an over-estimate that is invisible for heavy
 hitters---the hot table holds them exactly---and bounded by $\eps_s$ times the layer
 mass for the tail, where the cap is least likely to bind.
-Section~\ref{sec:eval-accuracy} measures both effects.Section~\ref{sec:eval-accuracy} measures both
-effects.
+Section~\ref{sec:eval-accuracy} measures both effects.

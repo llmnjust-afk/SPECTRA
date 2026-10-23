@@ -12,6 +12,27 @@ import pandas as pd
 
 from privfuse.experiments.common import FIGURES, RESULTS
 
+LABELS = {
+    "privfuse": "PrivFuse",
+    "exact_blocking": "exact per-tenant",
+    "exact_global": "exact global",
+    "static_quota": "static quota",
+    "token_bucket": "token bucket",
+    "audit_only": "audit only",
+}
+
+plt.rcParams.update(
+    {
+        "font.size": 7,
+        "axes.labelsize": 7,
+        "legend.fontsize": 6.5,
+        "xtick.labelsize": 6.5,
+        "ytick.labelsize": 6.5,
+        "axes.spines.top": False,
+        "axes.spines.right": False,
+    }
+)
+
 
 def _save(fig: plt.Figure, name: str) -> pathlib.Path:
     FIGURES.mkdir(parents=True, exist_ok=True)
@@ -72,14 +93,21 @@ def fig_e4() -> pathlib.Path | None:
     frame = _load("e4_attack")
     if frame is None:
         return None
-    fig, ax = plt.subplots(figsize=(5, 3))
+    fig, ax = plt.subplots(figsize=(3.4, 2.25))
     grouped = frame.groupby(["policy", "splits"])["escape_ratio"].mean().reset_index()
     for policy, group in grouped.groupby("policy"):
-        ax.plot(group["splits"], group["escape_ratio"], marker="o", label=policy)
-    ax.axhline(1.0, color="black", linestyle=":", label="cap")
+        ax.plot(
+            group["splits"],
+            group["escape_ratio"],
+            marker="o",
+            markersize=3,
+            linewidth=1.0,
+            label=LABELS.get(policy, policy),
+        )
+    ax.axhline(1.0, color="black", linestyle=":", linewidth=0.8, label="cap")
     ax.set_xlabel("requests per attack subject")
-    ax.set_ylabel("realised epsilon / cap")
-    ax.legend(fontsize=7, ncol=2)
+    ax.set_ylabel("realised $\\varepsilon$ / cap")
+    ax.legend(ncol=2, handlelength=1.2, columnspacing=0.8)
     return _save(fig, "fig3_attack")
 
 
@@ -133,9 +161,11 @@ def fig_e8() -> pathlib.Path | None:
     frame = _load("e8_scale")
     if frame is None:
         return None
-    fig, ax = plt.subplots(1, 2, figsize=(8, 3))
+    fig, ax = plt.subplots(2, 1, figsize=(3.4, 3.0), sharex=True)
     exact = frame[frame["backend"] == "exact"]
-    ax[0].plot(exact["subjects"], exact["bytes"] / 1e6, marker="o", label="exact")
+    ax[0].plot(
+        exact["subjects"], exact["bytes"] / 1e6, marker="o", markersize=3, linewidth=1.0, label="exact"
+    )
     for width, group in frame[frame["backend"] == "sketch"].groupby("width"):
         ax[0].plot(
             group["subjects"],
@@ -143,22 +173,26 @@ def fig_e8() -> pathlib.Path | None:
             marker="s",
             linestyle="--",
             label=f"sketch w={width}",
+            markersize=3,
+            linewidth=1.0,
         )
     ax[0].set_xscale("log")
     ax[0].set_yscale("log")
     ax[0].set_xlabel("subjects")
     ax[0].set_ylabel("peak memory (MB)")
-    ax[0].legend(fontsize=7)
-    ax[0].set_title("state size")
+    ax[0].legend()
+    ax[0].set_title("state size", fontsize=7)
 
     for width, group in frame[frame["backend"] == "sketch"].groupby("width"):
         ax[1].plot(group["subjects"], group["us_per_request"], marker="s", label=f"w={width}")
-    ax[1].plot(exact["subjects"], exact["us_per_request"], marker="o", label="exact")
+    ax[1].plot(
+        exact["subjects"], exact["us_per_request"], marker="o", markersize=3, linewidth=1.0, label="exact"
+    )
     ax[1].set_xscale("log")
     ax[1].set_xlabel("subjects")
     ax[1].set_ylabel("us / request")
-    ax[1].legend(fontsize=7)
-    ax[1].set_title("per-request cost")
+    ax[1].legend()
+    ax[1].set_title("per-request cost", fontsize=7)
     return _save(fig, "fig7_scale")
 
 

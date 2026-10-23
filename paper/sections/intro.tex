@@ -9,28 +9,22 @@ contracts escrowing payment and releasing keys against
 delivery~\cite{liu2025yotta}. The privacy half has not kept pace. A platform can
 prove that a tenant paid, and that a delivered object matches a committed digest,
 but it cannot say whether answering one more query would push some subject past
-the privacy budget the platform promised when the data was collected. That
-question is not about a single query; it is about the accumulated transcript of
-every query that touched the subject, from every tenant, on every platform of the
-market.
+the privacy budget the platform promised when the data was collected. That question concerns the
+accumulated transcript of every query that touched the subject, from every tenant
+and every platform.
 
 Differential privacy (DP) supplies the language for exactly this kind of
 statement~\cite{fioretto2024differential,desfontaines2019differential}. Its
 guarantee is compositional: the loss of a sequence of mechanisms is a function of
-the individual losses, so an operator who charges each release against a
-per-subject budget can bound the leakage of the
-transcript~\cite{mironov2017renyi,bun2016concentrated}. The governance
-literature has largely taken the budget for granted, treating it as a parameter
-of policy rather than a running quantity that must be measured, reserved and
-settled~\cite{majedi2024privacy,kapp2024collection}. Practice has followed suit:
-budgets are compiled into policy documents, tallied in offline jobs, and
-reconciled at the end of an accounting period. Auditing tools then estimate
-whether the released artifacts respected the promise, either by attacking the
-mechanism~\cite{cohen2018linear,ganev2026tight} or by comparing provable and
-empirical bounds~\cite{modi2026revisiting}, and the governance literature
-supplies the organisational scaffolding for such
-post-market~\cite{mokander2021conformity} and ethics-based~\cite{mokander2021ethicsbased}
-review.
+the individual losses, so an operator that charges each release against a
+per-subject budget bounds the leakage of the
+transcript~\cite{mironov2017renyi,bun2016concentrated}. The governance literature
+has taken the budget for granted, as a parameter of policy rather than a running
+quantity that must be measured, reserved and settled~\cite{kapp2024collection}. Practice has followed suit:
+budgets are compiled into policy documents, tallied in offline jobs, and reconciled
+at the end of an accounting period, while auditing tools estimate after the fact
+whether the released artifacts respected the
+promise~\cite{cohen2018linear,ganev2026tight,modi2026revisiting}.
 
 Retrospective accounting is defensible when a single curator releases a fixed set
 of statistics. It fails in a market, for three reasons that compound. First, the
@@ -89,9 +83,10 @@ with reserve/commit/release, establishing exactly-once settlement and
 single-spend safety under concurrent and crashing clients
 (Section~\ref{sec:design-settle}, Propositions~\ref{prop:safety}
 and~\ref{prop:atomic}).
-\item We implement \sys\ as a reference system and evaluate it on twelve
-experiments over three seeds, including an ablation, a sensitivity sweep and a
-scaling study to $10^6$ subjects (Section~\ref{sec:eval}).
+\item We implement \sys\ as a reference system and evaluate it on thirteen
+experiments, twelve of them over three seeds, including an ablation, a
+single-seed sensitivity sweep, a settlement-scaling study and a scaling study to
+$10^6$ subjects (Section~\ref{sec:eval}).
 \end{enumerate}
 
 The measurements separate what the design buys from what it costs. At a cap of
@@ -103,5 +98,5 @@ from 265\,MB to 4.7\,MB at $10^6$ subjects, and the sketch path costs
 invisible next to query execution. The escape ratio stays at 0.82 however finely
 the attacker splits, because splitting does not change the subject key, while
 audit-only enforcement rises to 2.43. We also report where the design does not help: striping
-brings no throughput on two cores, and the SLO monitor loses coverage when the hot
-table is small.
+pays off only when subjects are disjoint, and the SLO monitor loses coverage when
+the hot table is small.

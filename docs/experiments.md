@@ -128,6 +128,20 @@ one cap; the number admitted must equal `cap / cost` exactly. Throughput: 4,000
 disjoint reservations per thread at 1, 2 and 4 threads, with striped per-subject
 locks versus a single global lock.
 
+## E13 — settlement scaling
+
+Two measurements of where the settlement path serialises. (a) Disjoint-subject
+throughput in one CPython process: 20 000 reservations at 1, 2 and 4 threads, each
+subject either shared by every thread or private to one, with striped versus global
+locking, repeated three times and reported as the median. (b) Cross-process
+settlement: the same coordinator served over loopback TCP and driven by 1, 2 and 4
+client processes, recording throughput and the per-operation reserve+commit round
+trip (p50, p99).
+
+Part (b) is a two-process loopback measurement, not a multi-node deployment: there
+is no consensus, no replication and no persistent ledger backend. The numbers bound
+the cost of a remote settlement round trip, nothing more.
+
 ## Reading the numbers
 
 * Violation counts are the load-bearing result; wall-clock numbers are

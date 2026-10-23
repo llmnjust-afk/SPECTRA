@@ -2,12 +2,12 @@
 \label{sec:impl}
 
 \sys\ is a reference implementation in Python 3.11: about 4{,}200 lines across 44
-modules with 37 unit tests. The enforcement core has no dependency outside the
-standard library; NumPy, pandas and matplotlib are used only by the experiment
-drivers, so the measured per-request cost is not an artefact of a numerical stack.
-The package separates cost algebra, the sketch layer, the accountant, the SLO
-predicate and breaker, the ledger and coordinator, the platform harness and one
-module per experiment.
+modules with 37 unit tests. The enforcement core depends only on the standard
+library; NumPy, pandas and matplotlib are used by the experiment drivers, so the
+measured per-request cost is not an artefact of a numerical stack. The package
+separates cost algebra, the sketch layer, the accountant, the SLO predicate and
+breaker, the ledger and coordinator, the platform harness and one module per
+experiment.
 
 Two components are stubs. The ledger backend has an in-memory implementation and
 a Hyperledger Fabric adapter that raises \texttt{NotImplementedError}; the

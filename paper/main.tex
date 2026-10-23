@@ -47,10 +47,11 @@ increment, so reservation, commit and release are separated behind a
 subject-striped coordinator that makes splitting and crash-restart attacks
 unprofitable and settlement exactly-once. Third, windowed SLOs with a
 hysteretic breaker turn a cumulative bound into predictable degradation. On
-traces with $10^6$ subjects, \sys\ bounds memory at 4.7\,MB where exact
+synthetic populations of up to $10^6$ subjects, \sys\ bounds estimator memory at
+4.7\,MB where exact
 accounting needs 265\,MB, admits 0.93 of requests at a cap of $\eps{=}1.0$ with
 zero violations where exact per-tenant blocking admits 0.98 with 12.7
-violations, and holds the escape ratio at 0.82 while audit-only policies reach
+violations on average, and holds the escape ratio at 0.82 while audit-only policies reach
 2.43.
 \end{abstract}
 

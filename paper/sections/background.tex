@@ -4,20 +4,20 @@
 \subsection{Differential Privacy and Its Accounting}
 \label{sec:bg-dp}
 
-A randomized mechanism $M$ satisfies $(\eps,\delta)$-differential privacy if for
+A randomized mechanism $M$ satisfies $(\eps,\delta)$-differential
+privacy~\cite{dwork2006differential} if for
 every pair of neighbouring datasets $D,D'$ and every event $S$,
 $\Pr[M(D)\in S]\le e^{\eps}\Pr[M(D')\in S]+\delta$. The definition is
 per-release, but its power comes from composition: the guarantee for a transcript
 follows from the guarantees of its parts. That is what lets a platform promise a
 subject a bound on \emph{total} leakage rather than on each answer, and it is why
-the promise needs bookkeeping. Whatever its interpretation---Bayesian~\cite{kasiviswanathan2008semantics} or
-one of the variants surveyed in~\cite{desfontaines2019differential}---the
-quantity to bound is cumulative.
+the promise needs bookkeeping. Whatever its interpretation---one of the variants surveyed
+in~\cite{desfontaines2019differential}---the quantity to bound is cumulative.
 
 Composition bounds differ in how tightly they track it. R\'enyi
 DP~\cite{mironov2017renyi} gives sharp constants for a fixed number of adaptively
-chosen mechanisms, at the cost of a discrete order parameter: the accountant
-evaluates a grid of orders and converts the result to $(\eps,\delta)$.
+chosen mechanisms, at the cost of a discrete order grid: the accountant evaluates
+the grid and converts the result to $(\eps,\delta)$.
 Zero-concentrated DP~\cite{bun2016concentrated} bounds the R\'enyi divergence of
 order $1+\alpha$ by $\rho\alpha$ for all $\alpha>1$, composes by adding $\rho$,
 and converts in closed form,
@@ -82,8 +82,8 @@ reported statistic.
 An SLO is a predicate over a measurement window, not over a lifetime total. The
 distinction matters because a subject's tolerance is typically expressed as ``no
 more than $\eps$ in any thirty days'', which is a sliding window and therefore a
-different object from the cumulative $\eps$ that composition bounds. Enforcing only the total exhausts a budget in
-the first hour; enforcing only the window lets the total drift without bound.
-\sys\ maintains both: a cumulative sketch that never forgets, and a ring of epoch
+different object from the cumulative $\eps$ that composition bounds. Enforcing only
+the total exhausts a budget in the first hour; enforcing only the window lets the
+total drift without bound. \sys\ maintains both: a cumulative sketch that never forgets, and a ring of epoch
 sketches for windowed queries, with the SLO on the window and a separate hard cap on
 the total.

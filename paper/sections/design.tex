@@ -6,18 +6,18 @@
 
 \sys\ sits between the query planner and the execution engine of every platform,
 and it holds two kinds of state that answer different questions. The
-\emph{settlement ledger} answers ``what has this subject been charged, and what
-is still in flight?''. It is exact, it is the authority for the hard cap, and it
-has no time structure. The \emph{estimator} answers ``how fast is this subject's
-budget being consumed, relative to the window?''. It has time structure, it is
-consulted on every request, and it may be wrong in one direction only.
+\emph{settlement ledger} answers ``what has this subject been charged, and what is
+still in flight?''. It is exact, it is the authority for the hard cap, and it has no
+time structure. The \emph{estimator} answers ``how fast is this subject's budget
+being consumed, relative to the window?''. It has time structure, it is consulted on
+every request, and it may be wrong in one direction only.
 
 The split is deliberate. Exactness is cheap where the state is one scalar per
 subject and expensive where it is one counter per subject per epoch: a thirty-day
 window at five-minute resolution needs 8{,}640 epochs, so an exact windowed
-accountant for $10^6$ subjects would need $8.6\times10^{9}$ counters. We
-therefore make the ledger exact and the estimator one-sided, and
-Section~\ref{sec:analysis} proves that the composition preserves both properties.
+accountant for $10^6$ subjects would need $8.6\times10^{9}$ counters. We therefore
+make the ledger exact and the estimator one-sided, and Section~\ref{sec:analysis}
+proves that the composition preserves both properties.
 
 Figure~\ref{fig:arch} shows the request path. A query arrives with a declared
 sensitivity and target $\eps$, and the pricer converts it into a cost vector. The
@@ -78,8 +78,7 @@ inverts \eqref{eq:zcdp} at $\eps_q$; a Laplace mechanism is priced with
 $\eps_{\mathrm{pure}}=\Delta/b$ and $\rho=0$. The resulting $\cost(q)$ is the unit
 of account for every structure that follows, and the inversion is what lets a
 tenant ask for ``$\eps_q{=}0.25$ per query'' and receive a price in $\rho$ that
-composes without further conversion. Pricing is conservative in one respect: the
-pricer takes an upper bound on sensitivity rather than a point estimate, because
+composes without further conversion. Pricing is conservative: the pricer takes an upper bound on sensitivity, because
 an under-priced query is an unbounded liability while an over-priced one merely
-triggers the breaker early. The controller never re-prices between reservation
-and commit, so a crash cannot change the price of an answer already computed.
+triggers the breaker early. The controller never re-prices between reservation and
+commit, so a crash cannot change the price of an answer already computed.

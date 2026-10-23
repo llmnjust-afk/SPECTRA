@@ -1,27 +1,22 @@
 \subsection{Ablation and Stability}
 \label{sec:eval-ablation}
 
-Removing one component at a time (three seeds) gives the following. The full
+Removing one component at a time (three seeds, E7) gives the following. The full
 system admits 0.923 of requests at 4.77\,MB and 100.9\,$\mu$s per request; exact
-global admits 0.929 at 0.24\,MB and 10.8\,$\mu$s. Removing degradation,
-so that the breaker can only admit or refuse, costs 4.2 points of availability
-(0.881 against 0.923); degradation is doing the work of converting would-be
-refusals into answers. Shrinking the sketch from $2^{14}$ to $2^{9}$ columns
-changes availability not at all and cuts estimator memory from 4.77\,MB to
-0.71\,MB, while widening it to $2^{16}$ raises memory to 17.4\,MB and again
-changes availability not at all. Width is therefore not the lever at this scale:
-on a 1{,}500-subject trace the hot table holds every subject that matters and the
-columns are occupied by the tail, consistent with the 0.10\% heavy-hitter error at
-width 512 with a hot table.
+global admits 0.929 at 0.24\,MB and 10.8\,$\mu$s. Removing degradation, so that the
+breaker can only admit or refuse, costs 4.2 points of availability (0.881 against
+0.923): degradation converts would-be refusals into answers. Shrinking the sketch from $2^{14}$ to $2^{9}$ columns cuts memory from 4.77\,MB to
+0.71\,MB without moving availability, and widening it to $2^{16}$ raises memory to
+17.4\,MB without moving it either: on 1{,}500 subjects the hot table holds everyone
+who matters.
 
 The hot-table row is a warning. Disabling the table raises availability from
 0.923 to 0.930 and lowers cost from 101 to 80\,$\mu$s, which looks like a free win
-until one notices that the breaker's flap count falls to zero. The tenant-level
-monitor samples its violation rate from the hot table, so a capacity of one
-leaves the monitor with almost nothing to sample and the SLO machinery goes
-blind. The row is not evidence that the hot table hurts: it is evidence that the monitor
-and the estimator share a data structure, so ablating one silently ablates the
-other.
+until one notices that the breaker's flap count falls to zero. The monitor samples
+its violation rate from the hot table, so a capacity of one leaves it with nothing
+to sample and the SLO machinery goes blind. The row is not evidence that the hot
+table hurts: it is evidence that monitor and estimator share a structure, so
+ablating one silently ablates the other.
 
 
 
@@ -45,27 +40,26 @@ control it is a matter of solvability. An R\'enyi accountant evaluates a discret
 grid of orders and converts to $(\eps,\delta)$; the conversion has a floor at
 $\log(1/\delta)/(\alpha_{\max}-1)$, which for $\delta=10^{-5}$ and
 $\alpha_{\max}=512$ is $0.0225$. A tenant asking for $\eps_q{=}0.02$ is therefore
-below the floor, and no finite noise scale certifies the target. Our R\'enyi
-implementation responds by saturating at its noise cap of $\sigma=1000$, 4.17
-times the scale zCDP computes, and reports a per-charge $\eps$ of 0.023 with
+below the floor, and no noise scale on this grid certifies the target. Our R\'enyi
+implementation saturates at its noise cap of $\sigma=1000$, 4.17 times the scale
+zCDP computes, and reports a per-charge $\eps$ of 0.023 with
 \texttt{reached\_target} false rather than silently accepting the query. Basic
 composition, which sums $\eps$, needs $\sigma=240$ for the same target but reports
-$0.2008$ after 100 charges, ten times the budget zCDP reports.
-
-At $\eps_q{=}0.1$ the three backends agree to within 0.004\% in $\sigma$ and in
-the composed $\eps$ (1.0195 for zCDP, 1.0194 for R\'enyi); at $\eps_q{=}0.5$ they
-agree to within 0.006\%. The conclusion is narrow: for the per-query budgets a
-market actually prices---a few hundredths to a few tenths of an $\eps$---the
-closed-form zCDP conversion is the only one of the three that can both calibrate
-the mechanism and compose it without discarding an order of magnitude. R\'enyi DP
-remains the right tool for training-time accounting at larger budgets, where its
-constants win; it is the wrong tool for admission at $\eps_q{=}0.02$.
+$0.2008$ after 100 charges, ten times the budget zCDP reports. At
+$\eps_q{=}0.1$ the three backends agree to within 0.004\% in $\sigma$ and in the
+composed $\eps$ (1.0195 for zCDP, 1.0194 for R\'enyi), and at $\eps_q{=}0.5$ to
+within 0.006\%. The conclusion is narrow: for the per-query budgets a market prices,
+closed-form zCDP is the only one of the three that both calibrates the mechanism and
+composes it without discarding an order of magnitude. R\'enyi DP remains the right
+tool for training-time accounting at larger budgets, where its constants win; it is
+the wrong tool for admission at $\eps_q{=}0.02$.
 
 \subsection{What Soundness Costs in Utility}
 \label{sec:eval-utility}
 
-The utility experiment asks a subject's data to support queries until the cap is
-exhausted, and measures the accuracy of the resulting answer. At $\eps_q{=}1.0$
+The utility experiment asks a subject's data to support counting queries over a
+fixed predicate until the cap is exhausted, and measures the $F_1$ of the released
+count against the true count averaged over the queries admitted for that subject. At $\eps_q{=}1.0$
 \sys\ answers one query and reaches 0.823 accuracy, against 0.900 for an unbounded
 policy that answers 100 queries and spends 100$\eps$; at $0.5\eps$ it answers two
 at 0.552 against 0.881; at $0.25\eps$ it answers four at 0.542 against 0.871. The
@@ -73,8 +67,7 @@ unbounded and static-quota policies each exceed the cap on one subject in every
 seed, so their accuracy is bought with a violation.
 
 The gap at small $\eps_q$ is the budget, not overhead: $1.0\eps$ at $0.25\eps$ per
-query funds four queries, and four noisy answers cannot match a hundred. Among
-mechanisms that respect the cap, \sys\ is the only one in our set that answers more
-than zero queries at every $\eps_q$ with zero violations. The loss from degradation
-is smaller: 699 of 5{,}088 admitted queries are throttled at 70\% of nominal value,
-the 4\% gap to exact global.
+query funds four queries, and four noisy answers cannot match a hundred. The loss from degradation
+is smaller: 699 of the 5{,}088 admitted queries are throttled, 13.7\% of the
+total, and the cost of that degradation in availability is the 4.2 points measured
+in the ablation.
