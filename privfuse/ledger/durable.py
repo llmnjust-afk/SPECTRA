@@ -84,9 +84,14 @@ class DurableLedger(SettlementLedger):
                     costs,
                     now=record["created"],
                     platform=record.get("platform", "local"),
+                    query_digest=record.get("query", ""),
+                    mechanism=record.get("mechanism", ""),
+                    policy_version=record.get("policy", ""),
                 )
             elif op == "commit":
-                super().commit(record["tx"], now=record["now"])
+                super().commit(
+                    record["tx"], now=record["now"], receipt=record.get("receipt")
+                )
             elif op == "release":
                 super().release(
                     record["tx"],
@@ -114,9 +119,21 @@ class DurableLedger(SettlementLedger):
         costs: dict[str, CostVector],
         now: float = 0.0,
         platform: str = "local",
+        query_digest: str = "",
+        mechanism: str = "",
+        policy_version: str = "",
     ) -> Reservation:
         existing = self.get(tx_id)
-        reservation = super().reserve(tx_id, tenant, costs, now=now, platform=platform)
+        reservation = super().reserve(
+            tx_id,
+            tenant,
+            costs,
+            now=now,
+            platform=platform,
+            query_digest=query_digest,
+            mechanism=mechanism,
+            policy_version=policy_version,
+        )
         if existing is None:
             self._append(
                 {
@@ -124,6 +141,9 @@ class DurableLedger(SettlementLedger):
                     "tx": tx_id,
                     "tenant": tenant,
                     "platform": platform,
+                    "query": query_digest,
+                    "mechanism": mechanism,
+                    "policy": policy_version,
                     "costs": {
                         subject: [cost.eps_pure, cost.rho, cost.delta]
                         for subject, cost in costs.items()
@@ -134,11 +154,13 @@ class DurableLedger(SettlementLedger):
             )
         return reservation
 
-    def commit(self, tx_id: str, now: float = 0.0) -> Reservation:
+    def commit(self, tx_id: str, now: float = 0.0, receipt: str | None = None) -> Reservation:
         before = self.state(tx_id)
-        reservation = super().commit(tx_id, now=now)
+        reservation = super().commit(tx_id, now=now, receipt=receipt)
         if before is State.RESERVED:
-            self._append({"op": "commit", "tx": tx_id, "now": now})
+            self._append(
+                {"op": "commit", "tx": tx_id, "now": now, "receipt": receipt}
+            )
         return reservation
 
     def release(

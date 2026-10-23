@@ -100,6 +100,5 @@ def test_retry_after_expiry_is_refused_and_the_hold_returns():
     assert coord.ledger.reserved_eps("s0") == _pytest.approx(0.05)
     coord.tick(now=6.0)
     assert coord.ledger.reserved_eps("s0") == 0.0
-    with _pytest.raises(LedgerError):
-        _attempt(coord, _tx("x1", "t0", "p0"), "none", now=6.5)
+    assert _attempt(coord, _tx("x1", "t0", "p0"), "none", now=6.5) == "rejected"
     assert coord.ledger.commits == 0

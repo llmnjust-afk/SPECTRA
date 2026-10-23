@@ -48,6 +48,7 @@ class Reservation:
     state: State = State.RESERVED
     committed_at: float | None = None
     fingerprint: str = ""
+    receipt: str | None = None
 
 
 class SettlementLedger:
@@ -67,18 +68,49 @@ class SettlementLedger:
         self.expired = 0
         self.commits = 0
         self.releases = 0
+        self._tx_locks: dict[str, threading.Lock] = {}
+        self._tx_locks_guard = threading.Lock()
+
+    @contextmanager
+    def _tx_guard(self, tx_id: str):
+        """Serialise every operation on one transaction identifier.
+
+        The subject stripes cover the budget of a transaction's support, not the
+        transaction itself: two requests that share an identifier but touch
+        disjoint subjects would otherwise both observe ``None`` and both insert a
+        reservation.
+        """
+        with self._tx_locks_guard:
+            lock = self._tx_locks.setdefault(tx_id, threading.Lock())
+            if len(self._tx_locks) > 65536:
+                for name in [n for n, l in self._tx_locks.items() if not l.locked()]:
+                    if name != tx_id:
+                        del self._tx_locks[name]
+        with lock:
+            yield
 
     @staticmethod
-    def fingerprint(tenant: str, platform: str, costs: dict[str, CostVector]) -> str:
+    def fingerprint(
+        tenant: str,
+        platform: str,
+        costs: dict[str, CostVector],
+        query_digest: str = "",
+        mechanism: str = "",
+        policy_version: str = "",
+    ) -> str:
         """Canonical hash of everything a transaction commits to.
 
         Retrying with the same identifier is legal only if the payload is the
         same; otherwise a caller could reserve against one subject and execute
-        another under the same charge.
+        another under the same charge, or run a different query at the price of
+        the first.
         """
         payload = {
             "tenant": tenant,
             "platform": platform,
+            "query": query_digest,
+            "mechanism": mechanism,
+            "policy": policy_version,
             "costs": {
                 subject: [cost.eps_pure, cost.rho, cost.delta]
                 for subject, cost in sorted(costs.items())
@@ -95,54 +127,69 @@ class SettlementLedger:
         costs: dict[str, CostVector],
         now: float = 0.0,
         platform: str = "local",
+        query_digest: str = "",
+        mechanism: str = "",
+        policy_version: str = "",
     ) -> Reservation:
-        existing = self._reservations.get(tx_id)
-        if existing is not None:
-            if existing.tenant != tenant or existing.platform != platform:
-                raise LedgerError(f"transaction id {tx_id!r} reused by another tenant")
-            if existing.fingerprint != self.fingerprint(tenant, platform, costs):
-                raise LedgerError(
-                    f"transaction id {tx_id!r} reused with a different charge"
+        with self._tx_guard(tx_id):
+            existing = self._reservations.get(tx_id)
+            if existing is not None:
+                if existing.tenant != tenant or existing.platform != platform:
+                    raise LedgerError(f"transaction id {tx_id!r} reused by another tenant")
+                expected = self.fingerprint(
+                    tenant, platform, costs, query_digest, mechanism, policy_version
                 )
-            if existing.state is State.RESERVED:
-                return existing
-            raise LedgerError(f"transaction {tx_id!r} already {existing.state.value}")
-        res = Reservation(
-            tx_id=tx_id,
-            tenant=tenant,
-            platform=platform,
-            costs=dict(costs),
-            created=now,
-            expires=now + self.ttl,
-            fingerprint=self.fingerprint(tenant, platform, costs),
-        )
-        self._reservations[tx_id] = res
-        for subject, cost in costs.items():
-            self._reserved_eps[subject] = self._reserved_eps.get(subject, 0.0) + cost.eps(
-                self.delta
+                if existing.fingerprint != expected:
+                    raise LedgerError(
+                        f"transaction id {tx_id!r} reused with a different charge"
+                    )
+                if existing.state is State.RESERVED:
+                    return existing
+                raise LedgerError(f"transaction {tx_id!r} already {existing.state.value}")
+            res = Reservation(
+                tx_id=tx_id,
+                tenant=tenant,
+                platform=platform,
+                costs=dict(costs),
+                created=now,
+                expires=now + self.ttl,
+                fingerprint=self.fingerprint(
+                    tenant, platform, costs, query_digest, mechanism, policy_version
+                ),
             )
-        return res
-
-    def commit(self, tx_id: str, now: float = 0.0) -> Reservation:
-        res = self._reservations.get(tx_id)
-        if res is None:
-            raise LedgerError(f"unknown transaction {tx_id!r}")
-        if res.state is State.COMMITTED:
-            self.duplicate_commits += 1
+            self._reservations[tx_id] = res
+            for subject, cost in costs.items():
+                self._reserved_eps[subject] = self._reserved_eps.get(
+                    subject, 0.0
+                ) + cost.eps(self.delta)
             return res
-        if res.state is not State.RESERVED:
-            raise LedgerError(f"cannot commit {res.state.value} transaction {tx_id!r}")
-        for subject, cost in res.costs.items():
-            self._reserved_eps[subject] = max(
-                0.0, self._reserved_eps.get(subject, 0.0) - cost.eps(self.delta)
-            )
-            self._committed[subject] = self._committed.get(
-                subject, CostVector.zero()
-            ) + cost
-        res.state = State.COMMITTED
-        res.committed_at = now
-        self.commits += 1
-        return res
+
+    def commit(self, tx_id: str, now: float = 0.0, receipt: str | None = None) -> Reservation:
+        with self._tx_guard(tx_id):
+            res = self._reservations.get(tx_id)
+            if res is None:
+                raise LedgerError(f"unknown transaction {tx_id!r}")
+            if res.state is State.COMMITTED:
+                if receipt is not None and res.receipt is not None and receipt != res.receipt:
+                    raise LedgerError(
+                        f"transaction {tx_id!r} already committed a different receipt"
+                    )
+                self.duplicate_commits += 1
+                return res
+            if res.state is not State.RESERVED:
+                raise LedgerError(f"cannot commit {res.state.value} transaction {tx_id!r}")
+            for subject, cost in res.costs.items():
+                self._reserved_eps[subject] = max(
+                    0.0, self._reserved_eps.get(subject, 0.0) - cost.eps(self.delta)
+                )
+                self._committed[subject] = self._committed.get(
+                    subject, CostVector.zero()
+                ) + cost
+            res.state = State.COMMITTED
+            res.committed_at = now
+            res.receipt = receipt
+            self.commits += 1
+            return res
 
     def release(self, tx_id: str, now: float = 0.0, reason: State = State.RELEASED) -> Reservation:
         res = self._reservations.get(tx_id)
@@ -235,6 +282,7 @@ class Coordinator:
         self.delta = float(delta)
         self.ledger = ledger if ledger is not None else SettlementLedger(ttl=ttl, delta=delta)
         self.rejections = 0
+        self.rebinds = 0
         self.striped = bool(striped)
         self._global = threading.RLock()
         self._stripes = [threading.Lock() for _ in range(self.STRIPES)]
@@ -283,6 +331,9 @@ class Coordinator:
         platform: str,
         costs: dict[str, CostVector],
         now: float = 0.0,
+        query_digest: str = "",
+        mechanism: str = "",
+        policy_version: str = "",
     ) -> tuple[bool, str]:
         with self._guard(costs):
             for subject, cost in costs.items():
@@ -290,14 +341,27 @@ class Coordinator:
                 if cost.eps(self.delta) > remaining + 1e-12:
                     self.rejections += 1
                     return False, f"insufficient budget for subject {subject}"
-            self.ledger.reserve(tx_id, tenant, costs, now=now, platform=platform)
+            try:
+                self.ledger.reserve(
+                    tx_id,
+                    tenant,
+                    costs,
+                    now=now,
+                    platform=platform,
+                    query_digest=query_digest,
+                    mechanism=mechanism,
+                    policy_version=policy_version,
+                )
+            except LedgerError as error:
+                self.rebinds += 1
+                return False, str(error)
             return True, "reserved"
 
-    def commit(self, tx_id: str, now: float = 0.0) -> None:
+    def commit(self, tx_id: str, now: float = 0.0, receipt: str | None = None) -> None:
         reservation = self.ledger.get(tx_id)
         subjects = list(reservation.costs) if reservation is not None else []
         with self._guard(subjects):
-            self.ledger.commit(tx_id, now=now)
+            self.ledger.commit(tx_id, now=now, receipt=receipt)
 
     def release(self, tx_id: str, now: float = 0.0) -> None:
         reservation = self.ledger.get(tx_id)

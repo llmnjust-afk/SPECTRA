@@ -32,49 +32,60 @@ its estimator.
 \subsection{Is the Estimator Sound and Accurate?}
 \label{sec:eval-accuracy}
 
-Approximation must never produce a false negative: one at admission is a cap
-violation. Across 24 configurations---four widths, with and without the hot table,
-three seeds---we observe \emph{zero} false negatives. The property is not
-statistical: it follows from Proposition~\ref{prop:onesided}, and the experiment
-confirms the implementation respects it across eviction and re-admission.
+A false negative in the estimate cannot release an over-cap answer, because the
+ledger refuses it; what an under-estimate costs is a late throttle, which is why
+the estimator is built one-sided. Across 24 configurations---four widths, with and
+without the hot table, three seeds---the estimate never falls below the true charge,
+as Proposition~\ref{prop:onesided} requires, including across eviction and
+re-admission.
 
-Accuracy separates along the population. For the top percentile of subjects by
-spend---the ones whose budgets bind---relative error is 4.3\% without a hot table
-at width 512, 0.10\% with one, and 0.02\% at width 2048 and above, where the hot
-table rather than the width does the work. For the tail, mean absolute error is
-0.071$\eps$ at width 512 and 0.013 at width 2048, and p99 absolute error falls from
-0.37 to 0.10. Width 32{,}768 is wider than the number of distinct keys here and measures zero
-error at 2.1\,MB, which is why it is not the configuration we deploy.
+The monitor, not the estimator, limits what the SLO means (E25). At 24 checkpoints of
+a 600\,s trace at cap 0.5 we recompute the exact windowed composition of every subject
+and compare it with the rate the hot table reports. In the heavy-tailed population the
+table's recall is 1.0 for $H\ge64$ and 0.95 at $H{=}8$, and the monitored rate matches
+the population rate to three decimals. Flatten the popularity
+(Zipf 0.6) and shrink the table to eight slots and recall collapses to 0.014: 70 of 71
+violations are missed, and the monitored rate reads 0.000 against a population rate of
+0.002, because violators are no longer heavy hitters. Scanning the sketch over all $N$
+subjects recovers every violation in both regimes with at most two false alarms in
+1{,}500 subjects---the loss is sampling, not conservatism---but the scan costs $O(N)$
+per epoch. The windowed SLO is therefore best effort over the population; the cap is
+not.
+
+Accuracy separates along the population. For the top percentile by spend---the
+subjects whose budgets bind---relative error is 4.3\% without a hot table at width 512
+and 0.02\% from width 2048 up, where the table rather than the width does the work. For
+the tail, mean absolute error falls from 0.071$\eps$ to 0.013 and p99 from 0.37 to 0.10;
+width 32{,}768 measures zero error, which is why we do not deploy it.
 
 \subsection{What Does It Cost?}
 \label{sec:eval-cost}
 
 The estimator costs 27--32\,$\mu$s per request across widths from $2^{10}$ to
-$2^{16}$, against 4.6\,$\mu$s for an exact table on the same trace: an 18\% rise
-for a sixteen-fold increase in width, as expected from eight memory accesses per
-update plus the hot-table lookup. The full admission path is slower and far more variable
-(Fig.~\ref{fig:latency}a): median 74\,$\mu$s, mean 223\,$\mu$s, p99 5.6\,ms.
-Profiling attributes 46\% to the sketch and cost algebra, 14\% to the ledger, 12\%
-to the controller and 7\% to the accountant, and the tail is a single function, a
-tenant-pressure sweep that scans the hot table every 64 admissions. Disabling it
-buys back half the mean and almost all of the tail.
+$2^{16}$, against 4.6\,$\mu$s for an exact table: an 18\% rise for a sixteen-fold
+increase in width, as expected from eight memory accesses per update plus the hot-table
+lookup. The full admission path is slower and far more variable
+(Fig.~\ref{fig:latency}a). Its tail came from one function: a tenant-pressure sweep
+that scanned the hot table every 64 admissions, which cost p99 5.8\,ms against
+0.9\,ms with the sweep removed. We replaced it with an incremental update at commit
+time---$O(\text{ring})$ per charge, and a monitor over every charged subject rather
+than the hot table---and the p99 falls to 1.1\,ms for the same trace and host, with
+the mean moving from 0.28 to 0.23\,ms (E17).
 
-Queueing decides the deployment (Fig.~\ref{fig:latency}b): at 50\% utilisation the
-median is 0.17\,ms but the p99 is 107\,ms, because one 5.6\,ms event stalls
-everything behind it; a load that averages 50\% while peaking at five times capacity
-makes the median 0.93\,s. The path must be provisioned for its peak.
+Queueing still decides the deployment (Fig.~\ref{fig:latency}b): at 50\%
+utilisation the median is 0.26\,ms but the p99 is 160\,ms; a load that averages
+50\% while peaking at five times capacity makes the median 0.9\,s. The path must be
+provisioned for its peak, and microsecond averages are the wrong number to quote.
 
 Memory tells the opposite story at small scale: below roughly $10^{4}$ subjects a
-dense table is no larger than the sketch, because the sketch's width is paid once
-and the table's cost has not caught up.
-Figure~\ref{fig:scale} measures the regime that matters, with the default ring
-(four live tables) and resident memory: from $10^{3}$ to $10^{6}$ subjects the dense
-table grows from 1.2\,MB to 1.2\,GB while the sketch stays at 10.6\,MB (E23).
-Per-request cost rises more gently, from 25 to 45\,$\mu$s for the sketch and 9 to
-13\,$\mu$s for the table; the estimate stays one-sided, with maximum absolute error
-0.057$\eps$ (E8).
+dense table is no larger than the sketch, because the sketch's width is paid once and
+the table's cost has not caught up (Fig.~\ref{fig:scale}). From $10^{3}$ to $10^{6}$
+subjects the dense table grows from 1.2\,MB to 1.2\,GB while the sketch stays at
+10.6\,MB (E23); per-request cost rises from 25 to 45\,$\mu$s for the sketch and 9 to
+13\,$\mu$s for the table, and the estimate keeps its one-sidedness, with maximum
+absolute error 0.057$\eps$ (E8).
 
-\begin{figure}[tb]
+\begin{figure}[t]
 \centering
 \includegraphics[width=0.88\columnwidth]{figures/fig7_scale.png}
 \caption{Resident memory as the subject population grows (E23), with the default
@@ -83,13 +94,13 @@ under-estimates at every population.}
 \label{fig:scale}
 \end{figure}
 
-\begin{figure}[tb]
+\begin{figure}[t]
 \centering
 \includegraphics[width=0.9\columnwidth]{figures/fig17_latency.png}
 \caption{Admission latency (E17, 12{,}000 requests, median of three trials). (a)
-Service time with and without the tenant-pressure sweep, log scale; the sweep is a
-diagnostic, not an option. (b) FCFS queue over the measured service times under
-Poisson arrivals and under a burst at five times the average rate.}
+Service time under the per-request pressure sweep and under the incremental monitor we
+adopt, log scale. (b) FCFS queue over the measured service times under Poisson arrivals
+and under a burst at five times the average rate.}
 \label{fig:latency}
 \end{figure}
 

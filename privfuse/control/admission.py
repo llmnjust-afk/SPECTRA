@@ -28,6 +28,8 @@ class QueryRequest:
     purpose: str = "analytics"
     timestamp: float = 0.0
     utility: float = 1.0
+    query_digest: str = ""
+    mechanism: str = "gaussian"
 
     def cost_by_subject(self) -> dict[str, CostVector]:
         return {subject: self.cost for subject in self.subjects}
@@ -50,6 +52,8 @@ class Decision:
 
 @dataclass
 class AdmissionConfig:
+    policy_version: str = "1"
+    incremental_monitor: bool = True
     degrade_factor: float = 0.5
     degrade_utility_loss: float = 0.3
     window: float | None = None
@@ -98,6 +102,9 @@ class AdmissionController:
         self._tenant_stamp = -10**9
         self._tenant_refresh = 64
         self._subject_tenant: dict[str, str] = {}
+        self._monitor: dict[str, tuple[str, bool]] = {}
+        self._monitor_total: dict[str, int] = {}
+        self._monitor_violating: dict[str, int] = {}
 
     def recover(self) -> int:
         """Rebuild the estimator from committed charges (see ``rebuild_estimator``)."""
@@ -143,7 +150,44 @@ class AdmissionController:
         refreshed["*"] = max(refreshed.values(), default=0.0)
         self._tenant_map = refreshed
 
+    def _observe_monitor(self, subject: str, tenant: str, now: float) -> None:
+        """Update one subject's contribution to the monitored violation rate.
+
+        O(ring) per committed charge instead of an O(hot) scan per 64 requests.
+        The monitored set becomes every subject charged so far, not only the hot
+        table, which is closer to the population rate (E25).
+        """
+        estimate = self.accountant.estimate(
+            subject, now=now, window=self.config.window
+        ).eps(self.spec.delta)
+        violating = estimate > self.spec.soft_budget
+        previous = self._monitor.get(subject)
+        if previous is not None:
+            tenant_before, violating_before = previous
+            self._monitor_total[tenant_before] -= 1
+            if violating_before:
+                self._monitor_violating[tenant_before] -= 1
+        self._monitor[subject] = (tenant, violating)
+        self._monitor_total[tenant] = self._monitor_total.get(tenant, 0) + 1
+        if violating:
+            self._monitor_violating[tenant] = self._monitor_violating.get(tenant, 0) + 1
+        self._subject_tenant[subject] = tenant
+
+    def _publish_monitor(self) -> None:
+        """Refresh one tenant's monitored rate in place, then the global worst."""
+        rate = self.spec.violation_rate
+        for tenant, total in self._monitor_total.items():
+            if total <= 0:
+                continue
+            observed = self._monitor_violating.get(tenant, 0) / total
+            self._tenant_map[tenant] = (
+                (1.0 if observed > 0 else 0.0) if rate <= 0 else min(1.0, observed / rate)
+            )
+        self._tenant_map["*"] = max(self._tenant_map.values(), default=0.0)
+
     def _tenant_pressure(self, tenant: str, now: float) -> float:
+        if self.config.incremental_monitor:
+            return self._tenant_map.get(tenant, self._tenant_map.get("*", 0.0))
         self._refresh_tenant_pressure(now)
         return self._tenant_map.get(tenant, self._tenant_map.get("*", 0.0))
 
@@ -209,6 +253,9 @@ class AdmissionController:
             request.platform,
             request.cost_by_subject(),
             now=now,
+            query_digest=request.query_digest,
+            mechanism=request.mechanism,
+            policy_version=self.config.policy_version,
         )
         if not ok:
             self.counters["rejected"] += 1
@@ -230,14 +277,26 @@ class AdmissionController:
             pressure=pressure,
         )
 
-    def complete(self, decision: Decision, now: float = 0.0) -> None:
-        """Commit the reserved budget and publish the cost to the accountant."""
+    def complete(
+        self, decision: Decision, now: float = 0.0, receipt: str | None = None
+    ) -> None:
+        """Commit the reserved budget and publish the cost to the accountant.
+
+        The receipt names the answer the platform persisted for this transaction;
+        a retry of a committed request returns that answer instead of drawing a
+        fresh one.
+        """
         if not decision.allowed:
             return
-        self.coordinator.commit(decision.request.request_id, now=now)
+        self.coordinator.commit(decision.request.request_id, now=now, receipt=receipt)
         for subject in decision.request.subjects:
             self.accountant.observe(subject, decision.charged, now=now)
-            self._subject_tenant[subject] = decision.request.tenant
+            if self.config.incremental_monitor:
+                self._observe_monitor(subject, decision.request.tenant, now)
+            else:
+                self._subject_tenant[subject] = decision.request.tenant
+        if self.config.incremental_monitor:
+            self._publish_monitor()
 
     def abort(self, decision: Decision, now: float = 0.0) -> None:
         if decision.allowed:

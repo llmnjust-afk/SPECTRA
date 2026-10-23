@@ -1,23 +1,22 @@
 \section{Related Work}
 \label{sec:related}
 
-\emph{Privacy accounting.} Recent work on continual observation separates
-oblivious from adaptive adversaries~\cite{bun2026separating} and revisits the cost
-of answering online queries~\cite{bun2016make}. Tight auditing has become its own
-line, from reconstruction attacks on production query systems~\cite{cohen2018linear}
-to Gaussian-DP audits of synthetic data generators~\cite{ganev2026tight} and
-analyses of the gap between provable and auditable privacy in
-DP-SGD~\cite{modi2026revisiting}. All of it asks how large the loss was; \sys\ asks whether the next release may
-happen. We do not improve a composition bound: we take
-zCDP~\cite{bun2016concentrated} and make it cheap and monotone enough for an
-admission path, and measure R\'enyi~\cite{mironov2017renyi} and Gaussian
-DP~\cite{dong2021rejoinder} against it for that purpose.
+\emph{Privacy accounting.} Recent work on continual observation separates oblivious
+from adaptive adversaries~\cite{bun2026separating} and revisits the cost of online
+queries~\cite{bun2016make}. Tight auditing has become its own line, from
+reconstruction attacks on production query systems~\cite{cohen2018linear} to
+Gaussian-DP audits of synthetic data~\cite{ganev2026tight} and analyses of the gap
+between provable and auditable privacy in DP-SGD~\cite{modi2026revisiting}. All of it
+asks how large the loss was; \sys\ asks whether the next release may happen. We do
+not improve a composition bound: we take zCDP~\cite{bun2016concentrated} and make it
+cheap and monotone enough for admission, measuring
+R\'enyi~\cite{mironov2017renyi} and Gaussian DP~\cite{dong2021rejoinder} against it.
 
-\emph{Systems that enforce privacy.} PINQ established the pattern of a query
-interface that charges a budget per analyst~\cite{ebadi2015featherweight}; Fuzzi and
-Flex turn it into a deployed SQL system with elastic sensitivity and per-query
-pricing~\cite{johnson2018towards}, and production libraries apply the same
-accountant to training~\cite{yousefpour2021opacus,abadi2016deep}. Cohere tracks DP
+\emph{Systems that enforce privacy.} PINQ established the pattern of a query interface
+that charges a budget per analyst~\cite{ebadi2015featherweight}; Fuzzi and Flex turn it
+into a deployed SQL system with elastic sensitivity and per-query
+pricing~\cite{johnson2018towards}, and production libraries apply the same accountant to
+training~\cite{yousefpour2021opacus,abadi2016deep}. Cohere tracks DP
 budgets for analytics pipelines at block granularity~\cite{kchler2024cohere};
 PrivateKube schedules one budget across tenants~\cite{luo2021privacy} and DProvDB
 tracks provenance across colluding analysts~\cite{zhang2023dprovdb}. All of them key
@@ -29,31 +28,28 @@ batch~\cite{bittau2017prochlo}, a model now studied formally as anonymous
 shuffling~\cite{cheu2019distributed}; IncShrink combines MPC with DP at a
 cryptographic protocol per query~\cite{wang2022incshrink}.
 
-\emph{Auditing and governance.} A parallel literature builds the machinery for
-post-market monitoring~\cite{mokander2021conformity} and ethics-based
+\emph{Auditing and governance.} A parallel literature builds post-market
+monitoring~\cite{mokander2021conformity} and ethics-based
 audit~\cite{mokander2021ethicsbased}, and empirical studies show how far declared
-policy is from measured behaviour~\cite{kapp2024collection}. Recent work
-extends governance to AI-mediated platforms~\cite{shouli2025ethical}. \sys\ assumes
-the declaration exists and makes it enforceable at the point of sale.
+policy is from measured behaviour~\cite{kapp2024collection}, now extending to
+AI-mediated platforms~\cite{shouli2025ethical}. \sys\ assumes the declaration exists
+and makes it enforceable at the point of sale.
 
-\emph{Data markets.} Trustless trading has occupied the blockchain systems
-community, with recent designs scaling delivery and
-settlement~\cite{liu2025yotta} and provenance mechanisms tracking derived
-artifacts~\cite{zhu2025auditing}. These answer ``did I receive what I paid for?''. Pricing privacy has been studied as
-a negotiation between subject and buyer~\cite{jung2019privacy}, presupposing a budget
-that can be spent and tracked; the prior question---``may this answer be sold at
-all?''---is orthogonal, and the ledger records payments, not budgets. We add a budget
-root that every platform consults and make the charge itself a two-phase transaction
-keyed by the subject across platforms.
+\emph{Data markets.} Trustless trading has occupied the blockchain systems community,
+with recent designs scaling delivery and settlement~\cite{liu2025yotta} and provenance
+mechanisms tracking derived artifacts~\cite{zhu2025auditing}. These answer ``did I
+receive what I paid for?''. Pricing privacy has been studied as a negotiation between
+subject and buyer~\cite{jung2019privacy}, presupposing a budget that can be spent and
+tracked; the prior question---``may this answer be sold at all?''---is orthogonal. We
+add a budget root that every platform consults and make the charge itself a two-phase
+transaction keyed by the subject across platforms.
 
-\emph{Approximate counting.} Count-Min sketches and their conservative variants are
-well understood~\cite{fusy2023countmin,fusy2022phase}, including on power-law streams,
-and learned variants reduce error at the same width~\cite{nishishita2025optimized}. We
-want not the smallest error but an error with a known sign, which rules out unbiased
-estimators.
+\emph{Approximate counting.} Count-Min sketches and their conservative variants are well
+understood~\cite{fusy2023countmin,fusy2022phase}, including on power-law streams, and
+learned variants reduce error at the same width~\cite{nishishita2025optimized}; we want an
+error with a known sign.
 
-\emph{Mechanisms.} Every mechanism we price exposes a cost
-vector: DP synthesis~\cite{saha2024dpcda}, spectral
-perturbation~\cite{feng2023spectraldp}, geometric
-preconditioning~\cite{bosch2026dpkfc,duan2025technical}. How the vector is produced
-changes the vector, not the enforcement layer.
+\emph{Mechanisms.} Every mechanism we price exposes a cost vector: DP
+synthesis~\cite{saha2024dpcda}, spectral perturbation~\cite{feng2023spectraldp},
+geometric preconditioning~\cite{bosch2026dpkfc,duan2025technical}. How the vector is
+produced changes the vector, not the enforcement layer.

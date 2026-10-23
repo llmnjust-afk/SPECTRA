@@ -8,26 +8,26 @@ identifier.
 
 \begin{proposition}[One-sidedness]
 \label{prop:onesided}
-For every subject $s$ and time $t$ between a restart and its replay, the cumulative
-estimate satisfies $\hat{\spend}_s(t)\succeq\spend_s(t)$, and the windowed estimate
-$\hat{\spend}_s(t,W)$ satisfies $\hat{\spend}_s(t,W)\succeq\spend_s(t,W)$, where
-the comparison is componentwise on $(\eps_{\mathrm{pure}},\rho)$. The estimator is
-rebuilt from the committed log before the restarted coordinator admits anything, so
-the bound holds across restarts as well (E21).
+During normal execution, and after recovery completes, the cumulative estimate
+satisfies $\hat{\spend}_s(t)\succeq\spend_s(t)$ for every subject $s$ and time $t$,
+and the windowed estimate satisfies
+$\hat{\spend}_s(t,W)\succeq\spend_s(t,W)$, where the comparison is componentwise on
+$(\eps_{\mathrm{pure}},\rho)$. Recovery replays the committed log before the
+coordinator admits anything; during replay the estimator is not queried, so there is
+no interval in which a client is served against a partially rebuilt state.
 \end{proposition}
 
 \begin{IEEEproof}
-We maintain, for every layer $j$ and key $x$, the invariant
-$\min_r A_j[r,h_{j,r}(x)]\ge T_j(x)$ where $T_j$ is the true charge. It holds with
-all cells zero. On an update of $x$ by $c$, the conservative rule sets each cell on
-$x$'s row to $\max(a,\,m+c)$ with $m\ge T_j(x)$ the current row minimum, so every
-cell on that row becomes at least $T_j(x)+c$; cells of other keys only increase. The invariant is preserved. A subject held in
-the hot table is seeded with the sketch's bound at re-admission, hence at least
-$T_j(x)$ at that instant, and is then incremented exactly, so the invariant holds
-there too. The windowed estimate sums whole epochs that cover the window, each
-bounded below by its true charge, and charges are non-negative; hence the sum
-bounds the true windowed charge, provided the ring holds at least
-$\lceil W/\ell\rceil+1$ epochs, which Section~\ref{sec:design-accountant} enforces.
+Maintain, for every layer $j$ and key $x$, the invariant
+$\min_r A_j[r,h_{j,r}(x)]\ge T_j(x)$ for the true charge $T_j$; it holds with all
+cells zero. An update of $x$ by $c$ sets each cell on $x$'s row to $\max(a,m+c)$ with
+$m\ge T_j(x)$ the row minimum, so every such cell becomes at least $T_j(x)+c$, and
+cells of other keys only increase. A hot subject is seeded with the sketch's bound at
+re-admission, hence at least $T_j(x)$, and then incremented exactly. The windowed
+estimate sums whole epochs covering the window, each bounded below by its true charge,
+and charges are non-negative, so the sum bounds the true windowed charge provided the
+ring holds $\lceil W/\ell\rceil+1$ epochs, which
+Section~\ref{sec:design-accountant} enforces.
 \end{IEEEproof}
 
 Over-estimation costs availability; Section~\ref{sec:eval-accuracy} measures 0.02\%
@@ -62,11 +62,12 @@ the argument because the key of every reservation is the subject, not the accoun
 or the platform.
 \end{IEEEproof}
 
-\begin{proposition}[Exactly-once settlement]
+\begin{proposition}[Single-charge settlement]
 \label{prop:atomic}
-Assuming the ledger outlives the coordinator process, each admitted query is
-charged at most once under crashes and retries, and no answer is delivered
-without a committed charge.
+Assuming the ledger outlives the coordinator process, each transaction is charged at
+most once under crashes and retries, and no answer is delivered without a committed
+charge. A committed charge whose answer is lost to a crash is permitted, so this is
+at-most-once delivery with exactly-once charging, not exactly-once delivery.
 \end{proposition}
 
 \begin{IEEEproof}

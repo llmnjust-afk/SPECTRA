@@ -2,37 +2,40 @@
 \label{sec:eval-ablation}
 
 Removing one component at a time (three seeds, E7): the full system admits 0.923 of
-requests at 4.8\,MB accounted and 100.9\,$\mu$s; exact global admits 0.929 at 0.24\,MB and
-10.8\,$\mu$s. Removing degradation, so that the
-breaker can only admit or refuse, costs 4.2 points of availability (0.881 against
-0.923): degradation converts would-be refusals into answers. Shrinking the sketch from $2^{14}$ to $2^{9}$ columns cuts memory from 4.8\,MB to
-0.71\,MB without moving availability, and widening it to $2^{16}$ only costs memory:
-on 1{,}500 subjects the hot table holds everyone who matters.
+requests at 4.8\,MB and 100.9\,$\mu$s, exact global 0.929 at 0.24\,MB and
+10.8\,$\mu$s. Removing degradation, so the breaker can only admit or refuse, costs 4.2
+points of availability: degradation converts would-be refusals into answers. Shrinking
+the sketch from $2^{14}$ to $2^{9}$ columns cuts memory to 0.71\,MB without moving
+availability, and widening it only costs memory---on 1{,}500 subjects the hot table
+holds everyone who matters.
 
-Churn is the cost the capacity sweep hides (E14, Fig.~\ref{fig:slo}b): rotating 400
-heavy subjects per epoch raises the mean over-estimate from 0.16 to 0.28 at $0.15\eps$
-and from 0.25 to 0.65 at $1.0\eps$, and the p99 from 1.7 to 5.1$\times$. Safety is
-untouched---zero violations in 30 runs---because an evicted subject is re-seeded from
-the sketch, but the table stops paying for itself.
+Churn is the cost the capacity sweep hides (E14): rotating 400 heavy subjects per epoch
+raises the mean over-estimate from 0.16 to 0.28 at $0.15\eps$ and from 0.25 to 0.65 at
+$1.0\eps$, and the p99 from 1.7 to 5.1$\times$. Safety is untouched, since an evicted
+subject is re-seeded from the sketch, but the table stops paying for itself.
 
-Disabling the table raises availability from 0.923 to 0.930 and lowers cost from 101
-to 80\,$\mu$s, but the monitor samples its rate from that table, so ablating the table
-silently ablates the monitor.
-
-
-
-The last row is less comfortable than it suggests. At 1{,}500 subjects exact
-cumulative accounting matches \sys's availability within a point ($0.898$ against
-$0.906$ at $1.0\eps$) with 0.38\,MB against 5.05\,MB accounted in the same 600\,s configuration;
-its 19\,$\mu$s runs no breaker, coordinator or window. A windowed exact accountant (E16)
+Disabling the table raises availability to 0.930 but widens every windowed estimate.
+That baseline is less comfortable than it suggests: at 1{,}500 subjects exact cumulative
+accounting matches \sys's availability within a point (0.898 against 0.906 at
+$1.0\eps$) with 0.38\,MB against 5.05\,MB in the same 600\,s configuration, and its
+19\,$\mu$s runs no breaker, coordinator or window. A windowed exact accountant (E16)
 admits every request at $0.5\eps$ and still lets six of 1{,}500 subjects exceed their
-\emph{lifetime} cap, spending 1.08\,MB: a window is not a lifetime, and at $1.0\eps$ it
-reaches 1.000 against 0.906 with one lifetime violation. Putting the
-exact table behind the same ring, breaker and coordinator isolates approximation
-from functionality (E20): availability and windowed peak are equal at
-both caps, the exact version is 1.5$\times$ faster (233 against 156\,$\mu$s) and uses 0.37\,MB against 5.01\,MB accounted. At $10^{3}$ subjects the sketch
-buys nothing but the slope; measured from $10^{3}$ to $10^{6}$ with four live tables,
-that slope ends at 1.2\,GB resident against 10.6\,MB (E23).
+\emph{lifetime} cap, spending 1.08\,MB; at $1.0\eps$ it reaches 1.000 against 0.906 with
+one lifetime violation. Putting the exact table behind the same ring, breaker and
+coordinator isolates approximation from functionality (E20): availability and windowed
+peak are equal at both caps, and the exact version is faster, 156 against
+233\,$\mu$s, at 0.37 against 5.01\,MB. At $10^{3}$ subjects the sketch buys nothing but the slope; measured from $10^{3}$ to
+$10^{6}$ with four live tables, it ends at 1.2\,GB resident against 10.6\,MB (E23).
+
+E26 adds a sparse exact map---one ring per active
+subject---and the settlement state behind all three, at $10^{6}$ subjects with four
+epochs: 30.5\,MB dense, 1.6, 17.5, 83.8 and 168\,MB sparse at 1, 10, 50 and 100\%
+activity, and 2.7\,MB as a sketch. Below about 2\% activity the sparse map is both
+smaller and exact, and we do not claim the sketch there; by 10\% the sketch is six times
+smaller. In the full system the exact ledger costs about 1.1\,KB per committed subject,
+so at full activity the settlement state alone is 1.1\,GB and the estimator choice moves
+the total by a fraction of a percent: the sketch earns its place in the window state,
+not the settlement state.
 
 On a load oscillating around the threshold, hysteresis and dwell give the breaker
 zero transitions; without them, 26, of which 13 are reversals.
@@ -40,15 +43,14 @@ zero transitions; without them, 26, of which 13 are reversals.
 \subsection{Why zCDP and Not R\'enyi DP}
 \label{sec:eval-backend}
 
-The choice of algebra is usually about tightness; for admission it is about
-solvability. A R\'enyi accountant evaluates a discrete grid of orders, and its
-conversion to $(\eps,\delta)$ floors at $\log(1/\delta)/(\alpha_{\max}-1)$, which is
-$0.0225$ at $\delta=10^{-5}$ and $\alpha_{\max}=512$. A tenant asking for
-$\eps_q{=}0.02$ sits below that floor: our implementation saturates at
-$\sigma=1000$, 4.17 times the zCDP scale, and rejects the query rather than accept
-$0.023$. Basic composition reaches $0.2008$ after 100 charges at the same target, ten
-times zCDP's budget; at $\eps_q{=}0.1$ and $0.5$ the three backends agree to within
-0.004\% and 0.006\%. The conclusion is narrow: a R\'enyi grid extended to
+The choice of algebra is about solvability, not tightness. A R\'enyi accountant
+evaluates a discrete grid of orders and its conversion to $(\eps,\delta)$ floors at
+$\log(1/\delta)/(\alpha_{\max}-1)$, which is $0.0225$ at $\delta=10^{-5}$ and
+$\alpha_{\max}{=}512$: a tenant asking for $\eps_q{=}0.02$ sits below that floor, and
+our implementation saturates at $\sigma{=}1000$, 4.17 times the zCDP scale, and refuses
+the query rather than charge $0.023$. Basic composition reaches $0.2008$ after 100
+charges at that target, ten times zCDP's budget; at $\eps_q{=}0.1$ and $0.5$ the three
+backends agree to 0.004\% and 0.006\%. A R\'enyi grid extended to
 $\alpha_{\max}\ge1{,}200$ would also calibrate $0.02$, at the price of a conversion
 admission must search rather than invert.
 
@@ -56,14 +58,12 @@ admission must search rather than invert.
 \label{sec:eval-utility}
 
 The utility experiment puts a real dataset behind the cap: the UCI breast-cancer set
-(569 records, 30 features). A tenant repeatedly requests the class-conditional
-sufficient statistics of the binary label, each release noised by a Gaussian
-mechanism, and a Gaussian naive Bayes classifier fitted to the noisy statistics is
-scored on held-out data. At
-$\eps_q{=}1.0$ \sys\ answers one query at 0.823, against 0.900 for an unbounded
-policy that answers 100 queries regardless of cost; at $0.5\eps$ two queries at 0.552
-against 0.881; at $0.25\eps$ four at 0.542 against 0.871, and both baselines exceed
-the cap in every seed, so their accuracy is bought with a violation. The gap at small
-$\eps_q$ is the budget, not overhead: four noisy answers cannot match a hundred.
-Degradation costs less: 699 of 5{,}088 admitted queries are throttled, 13.7\%,
-worth the 4.2 points of availability in the ablation.
+(569 records, 30 features), split 70/30 stratified into 398 training and 171 test
+records. Features are clipped to the public unit interval, so the L2 sensitivity of a
+mean vector is $\sqrt{30}/398=3.4\times10^{-3}$; each release is four Gaussian
+mechanisms at a quarter of the per-release zCDP cost, the variance is debiased by the
+released noise variance, and five seeds give the spread. At $\eps_q{=}1.0$ \sys\ admits one query at $0.87\pm0.06$; at
+$0.5\eps$ three at $0.84\pm0.06$; at $0.25\eps$ fifteen at $0.60\pm0.22$. Cheaper releases do not buy accuracy: the admissible count grows as $1/\eps_q^2$, so
+the $\sqrt{n}$ averaging gain cancels the $1/\eps_q$ noise. The baselines answer 60 or
+100 queries at 0.92--0.93 while spending 2.0--12$\eps$, buying accuracy with a violation
+in every seed; 13.7\% of admitted queries are throttled rather than refused.

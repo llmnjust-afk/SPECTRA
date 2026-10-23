@@ -1,35 +1,29 @@
 \section{Discussion}
 \label{sec:discussion}
 
-Three principles transfer. Split the accounting state by the question it answers:
-exact where the quantity is money and must be settled, one-sided where it has time
-structure and must be cheap. Key every charge on the party that bears the loss, not
-the one who pays. Treat the charge as a transaction with a commit point.
+Three principles transfer. Split the accounting state by the question it answers: exact
+where the quantity is money and must be settled, one-sided where it has time structure
+and must be cheap. Key every charge on the party that bears the loss, and treat the
+charge as a transaction with a commit point.
 
-A deployment would replicate the coordinator over consensus nodes, own each subject
-on one node so the critical section stays local, and shard by subject range; E22 takes
-the first step with separate processes on one host. A subject's budget would then live
-on one node, which could under-report a charge, and receipts make that detectable only
-afterwards; closing it needs Byzantine agreement or a proof that the charge matches
-the mechanism executed.
+A deployment would replicate the coordinator over consensus nodes, own each subject on
+one node so the critical section stays local, and shard by subject range; E22 takes the
+first step with separate processes on one host and a loopback network, so we claim a
+trusted-coordinator prototype only. A subject's budget would then live on one node, which could under-report a charge;
+receipts make that detectable only afterwards, and closing it needs Byzantine agreement
+or a proof that the charge matches the mechanism executed. The accounting layer is itself
+sensitive---it records which subjects appear in which queries---and accumulators,
+oblivious access or an enclave each cost something the design does not budget for.
 
-The accounting layer is itself sensitive: the ledger records which subjects appear
-in which queries and the hot table is close to a list of the most-queried subjects, so
-a reader learns participation patterns without learning any answer. Accumulators,
-oblivious access or an enclave each cost something the design does not budget for;
-this is the most important open problem here.
+Two further limitations bound the claims. The monitor is exact over charged subjects, so
+its coverage depends only on whether a violation was charged, and E25 measures that loss
+(recall 0.014 with an eight-slot table on flat popularity). Of the two adversaries measured, one
+re-times its fragments after observing throttling (E18, loss 0.80 to 0.85 of the cap) and
+one cycles subjects through the hot table (E14, costing accuracy but never soundness).
 
-Three further limitations bound the claims. The SLO monitor samples the hot table, so
-its coverage depends on the hot capacity, and sampling the epoch ring directly is a fix
-we have not evaluated. Two adversaries are measured: one that observes throttling and
-re-times its fragments (E18, loss 0.80 to 0.85 of the cap, because the key still binds
-it) and one that cycles subjects through the hot table (E14, costing accuracy and
-availability but never soundness).
-
-Two conditions would falsify the approach. If a population is small and its policy
-cumulative, exact counting is cheaper (our ablation, $1{,}500$ subjects); with one
-platform a subject-keyed quota is sound, a tenant-keyed one is not. And if a query's
-cost cannot be predicted before execution, admission must price conservatively or fall
-back to post-hoc charging, weakening the guarantee to the one auditing provides. The
-design is for what remains: many subjects, several platforms, many tenants, and a
-promise that holds before the answer leaves the building.
+Two conditions would falsify the approach. For a small population under a cumulative
+policy, exact counting is cheaper (our ablation, $1{,}500$ subjects), and with one
+platform a subject-keyed quota is sound while a tenant-keyed one is not. If a query's cost
+cannot be predicted, admission must price conservatively, weakening the guarantee to what
+auditing provides; the design is for what remains, many subjects over several platforms,
+where the promise must hold before the answer leaves the building.

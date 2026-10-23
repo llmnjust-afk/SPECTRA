@@ -7,20 +7,23 @@ A market instance comprises subjects $\mathcal{S}$ with $|\mathcal{S}|=N$,
 platforms $\mathcal{P}$ with $|\mathcal{P}|=n_p$, tenants $\mathcal{T}$, and an
 append-only ledger $\mathcal{L}$. Each subject $s$ contributes records to one or more platforms and carries a
 declared cap $E_s$ on cumulative privacy loss, with an SLO saying how the cap may
-be spent over time. Each tenant submits queries naming a predicate and the
+be spent over time. Formally, subjects are identity atoms $u\in\mathcal{U}$, a record is
+a triple of platform, atom and value, and two datasets are neighbouring if they differ in
+one record, so a query touching $u$ on two platforms is charged twice against $E_u$.
+Identity resolution lies outside the trust boundary: the coordinator accepts a stable
+pseudonym from the platform's record index and \emph{refuses} a record that arrives
+without one, so an unknown identity is never a free identity. Each tenant submits queries naming a predicate and the
 platforms to evaluate it on; the receiving platform prices the query, obtains an
 admission decision, evaluates the noisy answer, and settles the charge.
 
-The coordinator is \emph{crash-faulty but not Byzantine}: it may stop and lose
-volatile state, but it does not fabricate charges. The ledger is append-only and
-authenticated; anchoring it on a public chain strengthens non-repudiation without
-changing any argument here. Platform code is assumed to
-compute the declared mechanism, with attestation left to orthogonal
-infrastructure~\cite{liu2025yotta,zhu2025auditing}. $\mathrm{supp}(q)$ follows from the predicate and the platform's
+The coordinator is \emph{crash-faulty but not Byzantine}: it may stop and lose volatile
+state, but it does not fabricate charges. The ledger is append-only and authenticated;
+anchoring it on a public chain strengthens non-repudiation without changing any
+argument here. Platform code computes the declared mechanism, with attestation left to
+orthogonal infrastructure~\cite{liu2025yotta,zhu2025auditing}. $\mathrm{supp}(q)$ follows from the predicate and the platform's
 record index, never from private values, so a refusal reveals only that a budget is
-spent. Out of scope are platform--subject collusion, timing side channels, and a
-platform that answers with less noise than it charges for, which is a
-verifiable-computation problem.
+spent. Out of scope are platform--subject collusion, timing side channels, and a platform that
+answers with less noise than it charges for, a verifiable-computation problem.
 
 The adversary is a tenant controlling $k\ge1$ accounts, possibly over several
 platforms, choosing queries adaptively as a function of the answers received, and
@@ -84,24 +87,29 @@ that is never released, not about a sample of past releases.
 admitted answers. A mechanism should maximise $A$ and $U$ subject to soundness,
 and in particular should not refuse a query that is provably safe.
 
-\emph{Stability.} Let $\tau$ be the number of mode transitions per epoch.
-Oscillation between admitting and refusing is a cost not captured by $A$, because
-a tenant that cannot predict admission cannot plan a workload; we require $\tau$
-to be bounded as a function of the hysteresis and dwell parameters.
+\emph{Stability.} Let $\tau$ be the number of mode transitions per epoch;
+oscillation is a cost not captured by $A$, because a tenant that cannot predict
+admission cannot plan, so $\tau$ must be bounded by the hysteresis and dwell
+parameters.
 
 \emph{Atomicity.} For every execution, including those with crashes and
 concurrent submissions, the charge committed to a subject equals the sum of costs
-of the queries admitted for that subject, each query is charged at most once, and
-no in-flight reservation is counted as available capacity.
+of the \emph{committed} transactions that name it, each transaction is charged at
+most once, and no in-flight reservation is counted as available capacity. A
+transaction that is admitted but fails before its commit is released and never
+charged, so an admitted-and-lost answer costs the subject nothing; the converse
+case, a committed charge whose answer is withheld by the crash, is permitted and
+counted as over-charge.
 
 The SLO specification is $(\theta_{\mathrm{soft}},p,W)$ with
 $\theta_{\mathrm{soft}}=\alpha E_s$ for a soft ratio $\alpha\in(0,1)$: the
 fraction of subject-epochs whose windowed spend exceeds $\theta_{\mathrm{soft}}$
 must not exceed $p$, and no subject-epoch may exceed $E_s$. The two thresholds
-are deliberately separate. The soft threshold is a target the breaker may miss
-under adversarial load and $p$ bounds how often; the hard cap is never a target,
-and one violation is a failure of the mechanism rather than a degradation of
-service.
+are enforced by different mechanisms and are deliberately separate. The hard cap
+is enforced by the exact ledger at reservation, so it does not depend on the
+estimator. The soft threshold is a target the breaker pursues using the
+estimator's windowed pressure; the monitor samples the population (Section~\ref{sec:eval-accuracy}), so $p$ is \emph{best effort} in the population and
+exact only for the monitored subjects, where the ledger still guarantees the cap.
 
 \subsection{Success Criterion for an Attacker}
 

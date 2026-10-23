@@ -1,57 +1,38 @@
 \subsection{Settlement and Concurrency}
 \label{sec:eval-concurrency}
 
-Five settlement invariants pass, among them the refusal to re-bind a reserve: the
-identifier is bound to a fingerprint of tenant, platform, support and charge, so a
-retry that changes any of them is refused rather than silently reused (tests, E22). In the
-atomicity test, 16 threads issue 3{,}200 attempts against a subject whose cap funds 100
-charges; every thread count admits exactly 100, $1.0\eps$ and zero violations.
+Six settlement invariants pass, among them the refusal to re-bind a reserve: the
+identifier is bound to a fingerprint of tenant, platform, query, support, charge,
+mechanism and policy version, and a per-identifier lock serialises its owners before the
+stripes are taken, so two requests with disjoint supports cannot both insert a
+reservation. A committed transaction replays its stored receipt, and a second commit
+carrying a different receipt is refused. In the atomicity test, 16 threads issue 3{,}200
+attempts against a subject whose cap funds 100 charges; every thread count admits exactly
+100, $1.0\eps$ and zero violations.
 
-Injecting a crash at each step of the transaction tests
-Proposition~\ref{prop:atomic} directly (Table~\ref{tab:faults}, E19), with the
-invariants read off the ledger rather than off the caller's bookkeeping. Over every
-crash point, one and four threads, and a crash rate up to 5\%, no answer left without
-a committed charge, no transaction was charged twice, and in-flight spend never
-crossed the cap; the price is the crash rate, 188 of 200 delivered at 5\%, plus one request in 800
-blocked by a suspended hold. The last row, three unshared ledgers, motivates the
-shared coordinator.
+Injecting a crash at each step of the transaction tests Proposition~\ref{prop:atomic}
+directly (E19), with the invariants read off the ledger. Over every crash point, one and
+four threads and a crash rate up to 5\%, no answer left without a committed charge, no
+transaction was charged twice, and in-flight spend never crossed the cap: a crash after
+reserve with a same-id retry delivers once and charges once, a retry after the TTL finds
+the hold returned, and a crash after commit withholds the answer but keeps the charge.
+The price is the crash rate, 188 of 200 delivered at 5\%, plus one request in 800 blocked
+by a suspended hold; three unshared per-platform ledgers let a subject reach
+$3.0\times$ its cap.
 
-\begin{table}[tb]
-\centering
-\caption{Fault injection at each settlement step (E19): one subject, cap
-$1.0\eps$, five-second TTL, same-id retry. A row is sound when answers never exceed
-commits.}
-\label{tab:faults}
-\footnotesize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}llrrl@{}}
-\toprule
-Crash point & Retry & Ans. & Com. & Outcome \\
-\midrule
-none                        & ---       & 1 & 1 & delivered \\
-reserve or execute          & same id   & 1 & 1 & charged once \\
-reserve or execute          & after TTL & 0 & 0 & hold returned \\
-commit                      & any       & 0 & 1 & answer withheld \\
-\midrule
-per-platform ledgers        & ---       & 60 & 60 & $3.0\times$ cap \\
-\bottomrule
-\end{tabular}
-\end{table}
+E19 keeps the ledger alive; E21 kills the process. Six SIGKILLs at the four settlement
+steps deliver 389 answers, none uncharged, at 0.191$\eps$ against a $0.2\eps$ cap; the
+same schedule on an in-memory ledger delivers 571 and pushes five of ten subjects past
+the cap---a restart that forgets is a budget reset. Durability costs 76\,$\mu$s per
+transition against 7.5\,$\mu$s. Striping pays only for disjoint subjects (E13, medians of
+three): four threads reach 21.4k operations per second on one subject against 26.5k for a
+global lock, and 91.5k on disjoint subjects---it removes a serialisation point, not
+contention.
 
-E19 keeps the ledger alive; E21 kills the process. Six SIGKILLs at the four
-settlement steps deliver 389 answers, none uncharged, at 0.191$\eps$ against a
-$0.2\eps$ cap; the same schedule on an in-memory ledger delivers 571 and pushes five
-of ten subjects past the cap, the worst to $2.1\times$---a restart that forgets is a
-budget reset. Durability costs 76\,$\mu$s per transition against 7.5\,$\mu$s.
-
-Striping pays only for disjoint subjects (E13, medians of three): four threads reach
-21.4k operations per second on one subject against 26.5k for a global lock, and 91.5k
-on disjoint subjects against 25.2k---it removes a serialisation point, not contention.
-
-Three platform processes against a coordinator process of their own reach about 230
-answers per second with each step fsynced (E22); killing that coordinator mid-trace
-and restarting it from the log costs $\approx$1.1\,s and a few percent of throughput,
-and still delivers 760 answers, none uncharged, no duplicate charge, and a worst
-client spend of $0.38\eps$ against $0.5\eps$. One client over loopback sustains 1.9k
-pairs per second at a 201\,$\mu$s median round trip. The caveats are one host, a
-loopback trip, and a stub adapter that hides the real commit trip.
+Three platform processes against a coordinator of their own reach about 230 answers per
+second with each step fsynced (E22); killing that coordinator mid-trace and restarting it
+from the log costs $\approx$1.1\,s and a few percent of throughput, and still delivers
+760 answers, none uncharged, no duplicate charge, worst client spend $0.38\eps$ against
+$0.5\eps$. One client over loopback sustains 1.9k pairs per second at a 201\,$\mu$s
+median round trip. The caveats are one host, a loopback trip and a stub adapter that hides
+the real commit trip.

@@ -26,39 +26,36 @@ it is monotone, invertible and cheap, which is what an admission decision needs.
 \subsection{The Market Setting}
 \label{sec:bg-market}
 
-We consider a market in which subjects contribute records to one or more
-platforms and tenants buy answers over those records. A permissioned ledger records
+We consider a market in which subjects contribute records to one or more platforms
+and tenants buy answers over those records. A permissioned ledger records
 contributions, charges and settlements, so a tenant can verify that an answer
-corresponds to a committed query. Trustless
-trading designs provide this for delivery~\cite{liu2025yotta}, and provenance
-mechanisms extend it to derived artifacts~\cite{zhu2025auditing}. What the ledger does not provide is a statement
-about a subject's remaining budget, because that depends on queries answered
-elsewhere and on charges still in flight.
+corresponds to a committed query---trustless trading provides this for
+delivery~\cite{liu2025yotta} and provenance mechanisms extend it to derived
+artifacts~\cite{zhu2025auditing}. What the ledger does not provide is a subject's
+remaining budget, which depends on queries answered elsewhere and on charges still in
+flight.
 
 Three properties shape the design. The population is large and heavy-tailed: most
-subjects appear in a handful of queries, a small minority in thousands, and it is
-that minority whose budgets bind. Tenants are numerous and mutually distrustful,
-with an incentive to maximise information per unit of budget, including under
-several identities. Queries arrive continuously, so enforcement sits on the
-critical path of every answer and has a latency budget of tens of microseconds.
+subjects appear in a handful of queries, a minority in thousands, and it is that
+minority whose budgets bind. Tenants are numerous, mutually distrustful and
+incentivised to maximise information per unit of budget, including under several
+identities. Queries arrive continuously, so enforcement sits on the critical path of
+every answer.
 
 \subsection{Approximate Counting for Thresholds}
 \label{sec:bg-sketch}
 
-A Count-Min sketch stores a $d\times w$ matrix of counters and updates, for key
-$x$ and weight $v$, one cell per row at the positions given by $d$ independent
-hash functions~\cite{fusy2023countmin}. The estimate is the minimum of the $d$
-cells, so collisions can only inflate it. Conservative update strengthens the
-guarantee: instead of adding $v$ to every cell it computes the current minimum
-$m$ and raises each cell to at most $m+v$, which never lowers an estimate and
-reduces overestimation in
-practice~\cite{fusy2022phase,fusy2023countmin}. A space-saving summary over the
-same stream retains the $k$ largest keys exactly and evicts the smallest. Recent work replaces the hash
-functions with a learned model~\cite{nishishita2025optimized} and revisits the
-row-count trade-off~\cite{fusy2023countmin}; both optimise estimation error,
-whereas our requirement is weaker and, in one respect, stricter: the estimate
-must never fall below the truth, because it gates a safety property rather than a
-reported statistic.
+A Count-Min sketch stores a $d\times w$ matrix of counters and updates, for key $x$
+and weight $v$, one cell per row at positions given by $d$ independent hash
+functions~\cite{fusy2023countmin}; the estimate is the minimum of the $d$ cells, so
+collisions can only inflate it. Conservative update raises each cell to at most
+$m+v$ for the current row minimum $m$, which never lowers an estimate and reduces
+over-estimation in practice~\cite{fusy2022phase,fusy2023countmin}. A space-saving
+summary over the same stream retains the $k$ largest keys exactly. Learned
+variants replace the hash functions~\cite{nishishita2025optimized}; all of them
+optimise estimation error, whereas our requirement is weaker and, in one respect,
+stricter: the estimate must never fall below the truth, because the breaker acts on
+it.
 
 \subsection{Service-Level Objectives}
 \label{sec:bg-slo}

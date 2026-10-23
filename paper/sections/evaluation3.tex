@@ -2,23 +2,13 @@
 \label{sec:eval-slo}
 
 Sweeping the soft threshold $\alpha$ from 0.55 to 0.95 at four values of $p$ moves
-availability from 0.749 to 0.794 and raises the fraction of settings at which the SLO
-holds from 0.25 to 1.0, while the hard cap never moves (Fig.~\ref{fig:slo}). The knobs
-are not independent: at $\alpha{=}0.55$ the monitored violation rate is 2.2\%, so the
-SLO holds only for $p\ge5\%$, while at $\alpha\ge0.85$ it is at most 0.22\% and the
-default $p{=}1\%$ holds. Operators trade a tight target against a loose rate, 4.5
-points apart, and cannot have both.
+availability from 0.749 to 0.794 and raises the fraction of settings in which the
+\emph{monitored} violation criterion is met from 0.25 to 1.0, while the hard cap never
+moves. The knobs are not independent: at $\alpha{=}0.55$ the monitored rate is 2.2\%,
+so the criterion holds only for $p\ge5\%$, while at $\alpha\ge0.85$ it is at most
+0.22\% and the default $p{=}1\%$ holds---a tight target and a loose rate are 4.5
+points apart, and E25 shows where the population rate departs from the monitored one.
 
-\begin{figure}[tb]
-\centering
-\includegraphics[width=0.9\columnwidth]{figures/fig11_slo_churn.png}
-\caption{Operating points. (a) Availability against the soft ratio, labelled with the
-observed soft-violation rate; the dotted line is where the default $p{=}1\%$ starts to
-hold. (b) Mean over-estimate (E14) when cohorts of heavy subjects are rotated into
-the population each epoch (the $0.15\eps$ cap has no 100-cohort run); the hot table
-keeps its accuracy only while churn is slow.}
-\label{fig:slo}
-\end{figure}
 
 The sensitivity sweep varies one factor at a time with one seed per point, so it
 locates trends, not variability. Two points bracket aggregation: with one platform, static quota becomes

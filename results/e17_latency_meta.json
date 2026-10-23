@@ -3,11 +3,11 @@
   "n_subjects": 1500,
   "requests": 12000,
   "seed": 5,
-  "service_mean_us": 222.98781024759742,
-  "service_p50_us": 73.66699992417125,
-  "service_p999_us": 10154.164807919407,
-  "service_p99_us": 5554.13074972422,
-  "sweep_disabled_mean_us": 108.19250258498414,
-  "sweep_disabled_p99_us": 468.42051991916395,
+  "service_mean_us": 230.27700990466352,
+  "service_p50_us": 157.20949886599556,
+  "service_p999_us": 2694.381320358048,
+  "service_p99_us": 953.7633817672033,
+  "sweep_disabled_mean_us": 212.98427516345933,
+  "sweep_disabled_p99_us": 859.0554471084038,
   "trials": 3
 }

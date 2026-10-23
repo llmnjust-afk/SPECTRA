@@ -50,17 +50,21 @@ availability under load.
 
 \begin{algorithm}[tb]
 \caption{Settlement. The log append is the commit point: durable before the state
-changes and before any answer leaves. States: \textsc{Reserved}$\to$\textsc{Committed}
-(deliver the answer the platform already holds), \textsc{Reserved}$\to$\textsc{Released}
-(abort or TTL); both are terminal, a repeated commit is a no-op, and a retry with the
-same identifier but a different support or charge is refused.}
+changes and before any answer leaves. The identifier index and the stripes are taken
+before the state is read, so one identifier means one payload even when two supports
+are disjoint. States: \textsc{Reserved}$\to$\textsc{Committed} (deliver the stored
+answer), \textsc{Reserved}$\to$\textsc{Released} (abort or TTL); both are terminal, a
+repeated commit is a no-op, and a retry with the same identifier but a different
+payload is refused. $H(\cdot)$ covers tenant, platform, query digest, support, charge,
+mechanism and policy version.}
 \label{alg:settle}
 \footnotesize
 \begin{algorithmic}[1]
 \Procedure{Reserve}{$tx, S, c$}
-  \State lock stripes of $S$ in sorted order; $st \gets \Call{State}{tx}$
+  \State $\Call{LockTx}{tx}$; lock stripes of $S$ in sorted order \Comment{tx first: no cycle}
+  \State $st \gets \Call{State}{tx}$
   \If{$st \ne \textsc{None}$} \Comment{retry: the payload must be identical}
-    \If{$\Call{Hash}{\text{tenant},S,c} \ne \Call{Fingerprint}{tx}$}
+    \If{$\Call{Hash}{\text{tenant},\text{platform},q,S,c,\text{mech},v} \ne \Call{Fingerprint}{tx}$}
       \State unlock; \Return \textsc{Refuse}
     \EndIf
     \If{$st = \textsc{Committed}$} \State unlock; \Return \textsc{Deliver} \EndIf
@@ -73,9 +77,9 @@ same identifier but a different support or charge is refused.}
   \State $\Call{Append}{\textsc{Reserved}, tx, S, c}$; \Call{Fsync}{}
   \State $\mathrm{inflight}(s)\mathrel{+}=c_s$ for $s\in S$; $\Call{SetState}{tx,\textsc{Reserved}}$; unlock
 \EndProcedure
-\Procedure{Commit}{$tx$}
-  \State lock; \If{$\Call{State}{tx} \ne \textsc{Reserved}$} unlock; \Return \EndIf
-  \State $\Call{Append}{\textsc{Committed}, tx}$; \Call{Fsync}{}
+\Procedure{Commit}{$tx, r$}
+  \State $\Call{LockTx}{tx}$; \If{$\Call{State}{tx} \ne \textsc{Reserved}$} unlock; \Return \EndIf
+  \State $\Call{Append}{\textsc{Committed}, tx, r}$; \Call{Fsync}{} \Comment{$r$: digest of the stored answer}
   \State $\mathrm{spend}(s)\mathrel{+}=c_s$; $\mathrm{inflight}(s)\mathrel{-}=c_s$; $\Call{Observe}{s,c_s}$
   \State unlock; \Return \textsc{Deliver}
 \EndProcedure

@@ -88,9 +88,12 @@ def _median_run() -> tuple[_Timed, Market, Any]:
     return runs[int(np.argsort(returns)[len(returns) // 2])]
 
 
-def _run(disable_sweep: bool = False) -> tuple[_Timed, Market, Any]:
+def _run(
+    disable_sweep: bool = False, incremental: bool = True
+) -> tuple[_Timed, Market, Any]:
     trace = default_trace(n_requests=N_REQUESTS, n_subjects=N_SUBJECTS, cap_eps=1.0, seed=SEED)
     policy = build_privfuse(trace)
+    policy.controller.config.incremental_monitor = incremental
     if disable_sweep:
         policy.controller._tenant_refresh = 10**9
     wrapped = _Timed(policy)
@@ -198,6 +201,26 @@ def _bursty(
 
 def run() -> list[dict[str, Any]]:
     _profile()
+
+    # Sweep vs incremental monitor: same trace, three trials each.
+    arms: list[dict[str, Any]] = []
+    for label, incremental in (("sweep", False), ("incremental", True)):
+        samples = []
+        for trial in range(3):
+            timed, _market, _trace = _run(incremental=incremental)
+            samples.append(np.asarray(timed.begin_s) + np.asarray(timed.finish_s))
+        merged = np.concatenate(samples)
+        arms.append(
+            {
+                "arm": label,
+                "mean_ms": float(merged.mean() * 1e3),
+                "p50_ms": float(np.percentile(merged, 50) * 1e3),
+                "p99_ms": float(np.percentile(merged, 99) * 1e3),
+                "max_ms": float(merged.max() * 1e3),
+            }
+        )
+        print(f"{label}: " + " ".join(f"{k}={v:.3f}" for k, v in arms[-1].items() if k != "arm"), flush=True)
+    write_csv("e17_monitor", arms)
 
     wrapped, market, trace = _median_run()
     service = np.asarray(wrapped.begin_s) + np.asarray(wrapped.finish_s[: len(wrapped.begin_s)])

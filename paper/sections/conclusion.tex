@@ -1,17 +1,15 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-Privacy budgets in data markets are enforced after the fact, keyed on the party that
-pays and reconciled outside the transaction that spends them, which lets a tenant
-split its traffic, release the answer before the overspend is known, and lose the
-charge on a crash. \sys\ moves the decision to admission around three
-commitments---an exact ledger, a one-sided sketch, and a two-phase reservation that
-separates a budget from a guess. On a million subjects the estimator holds 10.6\,MB
-where exact accounting needs 1.2\,GB; enforcement admits 0.93 of requests at
-$1.0\eps$ with no violations where per-platform blocking admits 0.98 and breaches the
-cap a dozen times; the escape ratio under a splitting tenant stays at 0.82 where
-policies without a subject key reach 2.43. The cost---4.4 points of availability at
-$1.0\eps$, 4.2 without degradation---is reported with the gains. Next comes
- privatising the accounting state and replacing trust in one coordinator with a proof
-that the charge matches the mechanism that ran.
-\enlargethispage{2\baselineskip}
+Privacy budgets in data markets are enforced after the fact, keyed on the party that pays
+and reconciled outside the transaction that spends them, so a tenant can split its traffic,
+release before the overspend is known, and lose the charge on a crash. \sys\ moves the decision to admission around three commitments---an exact
+ledger, a one-sided sketch, and a two-phase reservation that separates a budget from a
+guess. On a million subjects the estimator holds 10.6\,MB where exact accounting needs
+1.2\,GB; enforcement admits 0.93 of requests at $1.0\eps$ with no violations where
+per-platform blocking admits 0.98 and breaches the cap a dozen times; and the escape
+ratio under a splitting tenant stays at 0.82 where policies without a subject key reach
+2.43. The cost, 4.4 points of availability, is reported with the gains.
+Next comes privatising the accounting state and replacing trust in one coordinator with
+a proof that the charge matches the mechanism that ran.
+\enlargethispage{3\baselineskip}

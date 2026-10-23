@@ -12,27 +12,23 @@ but it cannot say whether one more answer would push some subject past the priva
 budget promised when the data was collected---a question about the accumulated
 transcript of every query that touched that subject, from every tenant and platform.
 
-Differential privacy (DP) supplies the language for exactly this kind of
-statement~\cite{fioretto2024differential,desfontaines2019differential}. Its
-guarantee is compositional: charging each release against a
-per-subject budget bounds the leakage of the whole
-transcript~\cite{mironov2017renyi,bun2016concentrated}. Governance treats the budget as a policy parameter rather than a running quantity
+Differential privacy (DP) supplies the language for this kind of
+statement~\cite{fioretto2024differential,desfontaines2019differential}, and its
+guarantee is compositional: charging each release against a per-subject budget bounds
+the leakage of the whole transcript~\cite{mironov2017renyi,bun2016concentrated}. Governance treats the budget as a policy parameter rather than a running quantity
 that must be measured, reserved and settled~\cite{kapp2024collection}: it is compiled
 into documents, tallied in offline jobs and reconciled later, while auditing tools
 estimate after the fact whether released artifacts respected
 it~\cite{cohen2018linear,ganev2026tight,modi2026revisiting}.
 
-Retrospective accounting is defensible when a single curator releases a fixed set
-of statistics. It fails in a market, for three reasons that compound. First, the
-accounting unit is wrong. Budgets are keyed by tenant because the tenant pays,
-but the loss accrues to the subject, and a tenant that can open accounts at
-several platforms---or simply at several tenants of one platform---converts one
-budget into many. Second, the decision point is wrong. By the time an audit
-reports an overspend the answers have been released and cannot be recalled.
-Third, the bookkeeping is not a counter but a transaction. A crash between
-admission and settlement either loses the charge, so the next query is admitted
-against a budget that was already consumed, or duplicates it, so availability
-collapses for no reason. Our measurements make the first failure concrete: a
+Retrospective accounting is defensible for a single curator releasing a fixed set of
+statistics; it fails in a market for three reasons that compound. The accounting unit
+is wrong: budgets are keyed by tenant because the tenant pays, but the loss accrues to
+the subject, so a tenant that opens accounts at several platforms converts one budget
+into many. The decision point is wrong: by the time an audit reports an overspend the
+answers have been released. And the bookkeeping is not a counter but a transaction: a
+crash between admission and settlement either loses the charge, so the next query is
+admitted against a consumed budget, or duplicates it, so availability collapses. Our measurements make the first failure concrete: a
 tenant that splits a budget across 60 accounts achieves an escape ratio of 2.43
 against audit-only enforcement and 1.69 against exact per-platform blocking, and
 neither number is visible to the platform until after the fact.
@@ -73,12 +69,16 @@ tenant model in which the adversary is the splitter, and four objectives
 \item We give a one-sided sketch accountant whose estimator memory is
 independent of the subject population, prove that it never underestimates spend,
 and show that hot-table seeding preserves one-sidedness across eviction
-(Section~\ref{sec:design-accountant}, Proposition~\ref{prop:onesided}).
+(Section~\ref{sec:design-accountant}, Proposition~\ref{prop:onesided}). The
+ledger, not the sketch, is the authority for the hard cap; one-sidedness matters
+because the breaker must not act on a windowed estimate that is too low.
 \item We recast budget accounting as a transaction and give a striped coordinator
-with reserve/commit/release, establishing single-spend settlement and
-single-spend safety under concurrent and crashing clients
-(Section~\ref{sec:design-settle}, Propositions~\ref{prop:safety}
-and~\ref{prop:atomic}).
+with reserve/commit/release, a transaction identifier bound to a fingerprint of
+tenant, platform, query digest, support, charge, mechanism and policy version,
+and a per-identifier lock that makes one identifier mean one payload even across
+disjoint subject stripes. This establishes single-charge settlement and cap safety
+under concurrent and crashing clients (Section~\ref{sec:design-settle},
+Propositions~\ref{prop:safety} and~\ref{prop:atomic}).
 \item We implement \sys\ as a reference system and evaluate it in twenty
 experiments, from a twelve-seed cap sweep and a closed-loop attacker to a
 fault-injection study and a scaling study at $10^6$ subjects
@@ -89,8 +89,10 @@ The measurements separate what the design buys from what it costs. At a cap of
 $\eps{=}1.0$, \sys\ admits 0.934 of requests with zero hard-cap violations, while
 exact per-platform blocking admits 0.978 and violates the cap 12.7 times per run: a
 4.4-point availability gap is the price of soundness. Estimator memory falls from
-1.2\,GB to 10.6\,MB at $10^6$ subjects, and the sketch path costs
-32\,$\mu$s per request against 4.6\,$\mu$s for an exact table, a gap invisible next
-to query execution. We also report where the design does not help: striping pays off only for
-disjoint subjects, churn erodes the hot table, and a periodic sweep dominates the
-p99 of the admission path.
+1.2\,GB of dense window state to 10.6\,MB at $10^6$ subjects, independent of how
+much of the population is active; a sparse exact table is smaller than the sketch
+below roughly $2\%$ activity and larger above it, which bounds where the sketch
+earns its place. We also report where the design does not help: striping pays off only for
+disjoint subjects, churn erodes the hot table, the monitored soft rate under-reports
+the population when violators are not heavy hitters, and the periodic monitor sweep
+dominated the p99 until we replaced it.

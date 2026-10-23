@@ -28,9 +28,11 @@ observed soft-violation rate and selects a mode. In \textsc{normal} mode the ful
 is reserved, in \textsc{throttle} mode the query is answered at a reduced charge (more
 noise, less utility), and in \textsc{reject} mode it is refused without touching data.
 Reservation is two-phase, and only a committed charge reaches the estimator, so a
-failed execution costs the subject nothing.
+failed execution costs the subject nothing. The ledger, not the estimator, is the
+authority for the hard cap; the estimator supplies the windowed pressure the
+breaker acts on, at memory independent of the population.
 
-\begin{figure*}[tb]
+\begin{figure*}[t]
 \centering
 \begin{tikzpicture}[
   font=\footnotesize,

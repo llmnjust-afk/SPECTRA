@@ -11,10 +11,13 @@ unlimited privacy budget.
 The classifier is Gaussian naive Bayes fitted to the noisy statistics, so the
 accuracy is a genuine downstream number rather than a proxy.
 
-Simplifications, stated rather than hidden: class counts are treated as public,
-features are clipped to the public unit interval before release, and the budget
-is charged by basic composition (each of the four mechanisms gets a quarter of
-the per-release epsilon). The resulting totals are therefore conservative.
+Simplifications, stated rather than hidden: class counts are treated as public and
+features are clipped to the public unit interval before release, so the L2
+sensitivity of a mean vector is $\sqrt{d}/n$ with $d=30$ and $n=398$ training
+records ($3.39\times10^{-3}$). The release is four Gaussian mechanisms (mean and
+second moment, two classes), each charged a quarter of the per-release zCDP cost,
+and the variance is reconstructed from the two noisy moments. Confidence
+intervals come from five seeds.
 """
 
 from __future__ import annotations
@@ -63,7 +66,9 @@ def _noisy_stats(
         counts.append(len(block))
         mean = block.mean(axis=0) + rng.normal(0.0, sigma, size=x.shape[1])
         second = (block**2).mean(axis=0) + rng.normal(0.0, sigma, size=x.shape[1])
-        variance = np.maximum(second - mean**2, 1e-9)
+        # E[(m + eta)^2] = m^2 + sigma^2, so the plug-in variance is biased down by
+        # the released noise; sigma is public, so subtracting it is post-processing.
+        variance = np.maximum(second - mean**2 - sigma**2, 1e-9)
         means.append(mean)
         variances.append(variance)
     return np.array(means), np.array(variances), np.array(counts)
@@ -88,23 +93,45 @@ def _accuracy(
     return float((scores.argmax(axis=1) == y_test).mean())
 
 
+def rho_for(eps_target: float, delta: float = DELTA_Q) -> float:
+    """zCDP cost of a declared ``eps_target`` (the paper's inverse conversion)."""
+    root = math.sqrt(math.log(1.0 / delta))
+    return (math.sqrt(math.log(1.0 / delta) + eps_target) - root) ** 2
+
+
+def compose(total_rho: float, delta: float = DELTA_Q) -> float:
+    """The paper's `g`: zCDP cost to (eps, delta) after adding ``total_rho``."""
+    if total_rho <= 0.0:
+        return 0.0
+    return total_rho + 2.0 * math.sqrt(total_rho * math.log(1.0 / delta))
+
+
+def max_releases(eps_per_release: float, cap: float, delta: float = DELTA_Q) -> int:
+    """Largest n with g(n rho) <= cap, the number a zCDP ledger would admit."""
+    rho = rho_for(eps_per_release, delta)
+    n = 0
+    while n < MAX_QUERIES and compose((n + 1) * rho, delta) <= cap + 1e-12:
+        n += 1
+    return n
+
+
 def _sigma_for(eps_per_release: float, n: int, d: int) -> float:
-    """Noise on a mean vector of ``d`` features released with ``eps_per_release``.
+    """Noise on a mean vector of ``d`` features released at ``eps_per_release``.
 
     Four mechanisms share the release (two classes times mean and second
-    moment), so each gets a quarter of the budget under basic composition. The
-    L2 sensitivity of a mean vector over ``n`` clipped records is ``sqrt(d)/n``.
+    moment), so each gets a quarter of the zCDP budget; a Gaussian mechanism
+    with L2 sensitivity ``sqrt(d)/n`` needs ``sigma = sensitivity/sqrt(2 rho)``.
     """
-    per_mechanism = eps_per_release / 4.0
+    rho_per_mechanism = rho_for(eps_per_release) / 4.0
     sensitivity = math.sqrt(d) / n
-    return sensitivity * math.sqrt(2.0 * math.log(1.25 / DELTA_Q)) / per_mechanism
+    return sensitivity / math.sqrt(2.0 * rho_per_mechanism)
 
 
 def run(
     epsilons: list[float] | None = None, seeds: list[int] | None = None
 ) -> list[dict[str, Any]]:
     epsilons = epsilons or [0.25, 0.5, 1.0]
-    seeds = seeds or [1, 2, 3]
+    seeds = seeds or [1, 2, 3, 4, 5]
     x_train, x_test, y_train, y_test = _load()
     rows: list[dict[str, Any]] = []
     for eps in epsilons:
@@ -132,13 +159,14 @@ def run(
                     _accuracy(averaged_means, averaged_var, counts, x_test, y_test)
                 )
 
-            unbounded = MAX_QUERIES * eps
-            quota = EPOCH_QUOTA * EPOCHS * eps
-            capped = int(math.floor(CAP / eps + 1e-9))
+            rho = rho_for(eps)
+            unbounded = compose(MAX_QUERIES * rho)
+            quota = compose(EPOCH_QUOTA * EPOCHS * rho)
+            capped = max_releases(eps, CAP)
             points = {
                 "unbounded": (MAX_QUERIES, unbounded),
                 "static_quota": (EPOCH_QUOTA * EPOCHS, quota),
-                "privfuse": (capped, capped * eps),
+                "privfuse": (capped, compose(capped * rho)),
             }
             for policy, (queries, spent) in points.items():
                 rows.append(
@@ -148,8 +176,10 @@ def run(
                         "seed": seed,
                         "queries": queries,
                         "total_eps": spent,
-                        "accuracy": curve[max(0, queries - 1)],
+                        "accuracy": curve[max(0, min(queries, MAX_QUERIES) - 1)],
                         "cap": CAP,
+                        "rho_per_release": rho,
+                        "sigma": sigma,
                         "violations": int(spent > CAP + 1e-12),
                     }
                 )
