@@ -4,14 +4,12 @@
 \subsection{Differential Privacy and Its Accounting}
 \label{sec:bg-dp}
 
-A randomized mechanism $M$ satisfies $(\eps,\delta)$-differential
-privacy~\cite{dwork2006differential} if for
-every pair of neighbouring datasets $D,D'$ and every event $S$,
-$\Pr[M(D)\in S]\le e^{\eps}\Pr[M(D')\in S]+\delta$. The definition is
-per-release, but its power comes from composition: the guarantee for a transcript
-follows from the guarantees of its parts. That is what lets a platform promise a
-subject a bound on \emph{total} leakage rather than on each answer, and it is why
-the promise needs bookkeeping. Whatever its interpretation---one of the variants surveyed
+A mechanism $M$ satisfies $(\eps,\delta)$-differential
+privacy~\cite{dwork2006differential} if for every pair of neighbouring datasets $D,D'$
+and every event $S$, $\Pr[M(D)\in S]\le e^{\eps}\Pr[M(D')\in S]+\delta$. The
+definition is per-release, but composition carries it to a transcript, which is what
+lets a platform promise a bound on \emph{total} leakage rather than on each answer,
+and why the promise needs bookkeeping. Whatever its interpretation---one of the variants surveyed
 in~\cite{desfontaines2019differential}---the quantity to bound is cumulative.
 
 Composition bounds differ in how tightly they track it. R\'enyi

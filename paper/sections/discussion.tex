@@ -8,35 +8,31 @@ on the party that bears the loss, not the party that pays, because that gap is t
 one an adversary exploits. Treat the charge as a transaction with a commit point,
 because a counter without one is eventually incremented twice or not at all.
 
-The deployment path we have in mind replicates the coordinator across a small set
-of consensus nodes, owns each subject on one node so the critical section stays
-local, and shards the ledger by subject range. That removes the single-process
-bottleneck but introduces a trust question we have not solved: a subject's budget
-now lives on one node, and a malicious node could under-report a charge. Signed
-receipts make under-reporting detectable after the fact, which is weaker than the
-guarantee inside one process; closing the gap needs Byzantine agreement or a proof
-that the charge corresponds to the mechanism executed.
+The deployment path we have in mind replicates the coordinator across a few consensus
+nodes, owns each subject on one node so the critical section stays local, and shards
+the ledger by subject range. That removes the single-process bottleneck but leaves a
+trust question: a subject's budget lives on one node, and a malicious node could
+under-report a charge. Signed receipts make that detectable after the fact, which is
+weaker than the guarantee inside one process; closing it needs Byzantine agreement or
+a proof that the charge matches the mechanism executed.
 
-The accounting layer is itself sensitive: the ledger records which subjects appear
-in which queries, and the hot table is close to a list of the subjects about whom the
-most has been asked, so a reader of the accounting state learns participation
-patterns without learning any answer. We have not addressed this; accumulators,
-oblivious access, or an enclave for the hot table each
-cost something the current design does not budget for, and in our view this is the
-most important open problem here.
+The accounting layer is itself sensitive: the ledger records which subjects appear in
+which queries, and the hot table is close to a list of the most-queried subjects, so a
+reader learns participation patterns without learning any answer. Accumulators,
+oblivious access or an enclave for the hot table each cost something the design does
+not budget for; this is the most important open problem here.
 
 Three further limitations bound the claims. The SLO monitor samples the hot table,
 so its coverage depends on the hot capacity, and sampling the epoch ring directly is
-a fix we have not evaluated. The adversary chooses its split in advance; one that
-observes throttling and re-times its fragments could extract more than our ratios
-suggest, though the key still binds it. An adversary that cycles subjects through the
+a fix we have not evaluated. An adversary that observes throttling and
+re-times its fragments is measured in E18: probing lifts its loss from 0.80 to 0.85 of
+the cap and stops there, because the key still binds it. An adversary that cycles subjects through the
 hot table is measured in E14: it costs accuracy and availability, never soundness.
 
-What would falsify the approach? If a population is small and its policy
-cumulative, exact counting is cheaper and faster, as our ablation shows at
-$1{,}500$ subjects; with one platform, per-tenant quotas are already sound. If a
-query's cost cannot be predicted before execution---because its sensitivity depends
-on the data---admission must price conservatively or fall back to post-hoc charging,
-and the guarantee weakens to the one the auditing literature provides. The design is
-for the case that remains: many subjects, several platforms, many tenants, and a
-promise that must hold before the answer leaves the building.
+Two conditions would falsify the approach. If a population is small and its policy
+cumulative, exact counting is cheaper, as our ablation shows at $1{,}500$ subjects;
+with one platform, per-tenant quotas are already sound. And if a query's cost cannot
+be predicted before execution, admission must price conservatively or fall back to
+post-hoc charging, weakening the guarantee to the one auditing provides. The design is
+for what remains: many subjects, several platforms, many tenants, and a promise that
+holds before the answer leaves the building.

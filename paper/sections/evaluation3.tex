@@ -13,10 +13,10 @@ of subjects crosses any threshold near zero whatever the policy.
 
 The sensitivity sweep varies one factor at a time around the default and uses a
 single seed per point, so it locates trends rather than estimating their
-variability. Two points bracket the aggregation effect. With one platform, static
-quota becomes sound---zero violations, worst spend $0.969\eps$---because a
-per-tenant quota on the only platform is also a per-subject quota; with six
-platforms its worst spend rises to $1.859\eps$ while \sys\ stays at $0.825\eps$.
+variability. Two points bracket aggregation: with one platform, static quota becomes
+sound---worst spend $0.969\eps$---because a per-tenant quota on the only platform is
+also a per-subject quota; with six, its worst spend rises to $1.859\eps$ while \sys\
+stays at $0.825\eps$.
 A heavier tail ($\alpha_{\mathrm{zipf}}{=}1.5$) costs 15 points of availability,
 from 0.936 to 0.783; 200 tenants cost 4, as more of them touch each subject between
 refreshes; a 64-entry hot table costs 2; and moving $\delta$ from $10^{-6}$ to

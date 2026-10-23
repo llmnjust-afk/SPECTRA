@@ -1,8 +1,8 @@
 \section{Implementation}
 \label{sec:impl}
 
-\sys\ is a reference implementation in Python 3.11: about 4{,}200 lines across 44
-modules with 37 unit tests. The enforcement core depends only on the standard
+\sys\ is a reference implementation in Python 3.11: about 5{,}700 lines across 51
+modules with 44 tests. The enforcement core depends only on the standard
 library; NumPy, pandas and matplotlib are used by the experiment drivers, so the
 measured per-request cost is not an artefact of a numerical stack. The package
 separates cost algebra, the sketch layer, the accountant, the SLO predicate and

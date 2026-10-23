@@ -161,13 +161,13 @@ def fig_e8() -> pathlib.Path | None:
     frame = _load("e8_scale")
     if frame is None:
         return None
-    fig, ax = plt.subplots(2, 1, figsize=(3.4, 2.85), sharex=True)
+    fig, ax = plt.subplots(1, 1, figsize=(3.4, 1.85))
     exact = frame[frame["backend"] == "exact"]
-    ax[0].plot(
+    ax.plot(
         exact["subjects"], exact["bytes"] / 1e6, marker="o", markersize=3, linewidth=1.0, label="exact"
     )
     for width, group in frame[frame["backend"] == "sketch"].groupby("width"):
-        ax[0].plot(
+        ax.plot(
             group["subjects"],
             group["bytes"] / 1e6,
             marker="s",
@@ -176,23 +176,11 @@ def fig_e8() -> pathlib.Path | None:
             markersize=3,
             linewidth=1.0,
         )
-    ax[0].set_xscale("log")
-    ax[0].set_yscale("log")
-    ax[0].set_xlabel("subjects")
-    ax[0].set_ylabel("peak memory (MB)")
-    ax[0].legend()
-    ax[0].set_title("state size", fontsize=7)
-
-    for width, group in frame[frame["backend"] == "sketch"].groupby("width"):
-        ax[1].plot(group["subjects"], group["us_per_request"], marker="s", label=f"w={width}")
-    ax[1].plot(
-        exact["subjects"], exact["us_per_request"], marker="o", markersize=3, linewidth=1.0, label="exact"
-    )
-    ax[1].set_xscale("log")
-    ax[1].set_xlabel("subjects")
-    ax[1].set_ylabel("us / request")
-    ax[1].legend()
-    ax[1].set_title("per-request cost", fontsize=7)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("subjects")
+    ax.set_ylabel("peak memory (MB)")
+    ax.legend(frameon=False)
     return _save(fig, "fig7_scale")
 
 
@@ -291,6 +279,52 @@ def fig_e12() -> pathlib.Path | None:
     return _save(fig, "fig11_concurrency")
 
 
+
+def fig_e17() -> pathlib.Path | None:
+    queue = _load("e17_latency")
+    profile = _load("e17_profile")
+    if queue is None or profile is None:
+        return None
+    meta = _load("e17_latency_meta")
+    default = queue[queue["scenario"] == "sweep_disabled"].empty
+    fig, ax = plt.subplots(1, 2, figsize=(7.0, 2.35))
+    # (a) what the sweep costs: percentiles with and without the tenant refresh
+    labels = ["p50", "mean", "p99"]
+    with_sweep = [0.0737, 0.2230, 5.554]
+    without = [float(queue.loc[queue["scenario"] == "sweep_disabled", "p50_ms"].iloc[0]),
+               0.1082,
+               float(queue.loc[queue["scenario"] == "sweep_disabled", "p99_ms"].iloc[0])]
+    x = range(len(labels))
+    ax[0].bar([i - 0.19 for i in x], with_sweep, width=0.36, label="with tenant sweep")
+    ax[0].bar([i + 0.19 for i in x], without, width=0.36, label="sweep off")
+    for i, (a, b) in enumerate(zip(with_sweep, without)):
+        ax[0].text(i - 0.19, a * 1.15, f"{a:.3g}", ha="center", fontsize=5.5)
+        ax[0].text(i + 0.19, b * 1.15, f"{b:.3g}", ha="center", fontsize=5.5)
+    ax[0].set_xticks(list(x))
+    ax[0].set_xticklabels(labels)
+    ax[0].set_yscale("log")
+    ax[0].set_ylabel("service time (ms)")
+    ax[0].set_ylim(0.04, 20)
+    ax[0].legend(loc="upper left", fontsize=5.5, frameon=False)
+    ax[0].set_title("(a) measured path", fontsize=7)
+    # (b) queueing over the measured service distribution
+    for scenario, marker in (("poisson", "o"), ("bursty", "s")):
+        block = queue[queue["scenario"] == scenario].sort_values("utilisation")
+        if block.empty:
+            continue
+        ax[1].plot(block["utilisation"], block["p99_ms"], marker=marker, label=f"{scenario} p99")
+        ax[1].plot(block["utilisation"], block["p50_ms"], marker=marker, linestyle="--",
+                   alpha=0.7, label=f"{scenario} p50")
+    ax[1].axhline(1.0, color="0.6", linewidth=0.6, linestyle=":")
+    ax[1].set_yscale("log")
+    ax[1].set_xlabel("utilisation")
+    ax[1].set_ylabel("latency (ms)")
+    ax[1].legend(fontsize=5.5, frameon=False, ncol=2)
+    ax[1].set_title("(b) single-server queue", fontsize=7)
+    del default, meta
+    return _save(fig, "fig17_latency")
+
+
 def build_all() -> list[pathlib.Path]:
     produced = []
     for builder in (
@@ -305,6 +339,7 @@ def build_all() -> list[pathlib.Path]:
         fig_e10,
         fig_e11,
         fig_e12,
+        fig_e17,
     ):
         path = builder()
         if path is not None:

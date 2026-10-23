@@ -30,11 +30,12 @@ suggests. At 1{,}500 subjects exact cumulative accounting matches \sys's
 availability within a point ($0.898$ against $0.906$ at $1.0\eps$; $0.713$ against
 $0.721$ at $0.5\eps$) with 0.38\,MB against 5.0\,MB. Its 19\,$\mu$s per request is not
 a like-for-like cost: it runs no breaker, coordinator or window. A windowed exact accountant is likewise implementable (E16, 600\,s window): at
-$0.5\eps$ it admits every request, because no subject crosses the window cap, while
-six of 1{,}500 subjects exceed their \emph{lifetime} cap. Windowed enforcement bounds a window, not a lifetime.
-\sys's case therefore rests neither on windows being inexpressible nor on exact
-tabulation being slow at $10^{3}$ subjects, but on $10^{6}$ subjects, where the table
-is 265\,MB (Figure~\ref{fig:scale}).
+$0.5\eps$ it admits every request and still lets six of 1{,}500 subjects exceed their
+\emph{lifetime} cap, spending 1.08\,MB against \sys's 5.0\,MB. Windowed enforcement
+bounds a window, not a lifetime, and at $1.0\eps$ the two are within a point of
+availability ($1.000$ against $0.906$) with one lifetime violation. \sys's case
+therefore rests neither on windows being inexpressible nor on exact tabulation being
+slow at $10^{3}$ subjects, but on $10^{6}$, where the table is 265\,MB.
 
 On a load oscillating around the threshold, hysteresis and dwell give the breaker
 zero transitions, and without them 26, 13 of them reversals.

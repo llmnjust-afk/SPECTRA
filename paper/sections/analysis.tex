@@ -85,9 +85,8 @@ most $\lfloor T/d\rfloor$, where $d$ is the dwell parameter.
 \end{proposition}
 
 \begin{IEEEproof}
-A de-escalation requires $d$ consecutive evaluations below the current
-threshold minus the hysteresis margin, and the counter resets on any evaluation
-that is not below it. Each de-escalation therefore consumes at least $d$ distinct
+A de-escalation requires $d$ consecutive evaluations below the threshold minus the
+hysteresis margin, and any other evaluation resets the counter. Each de-escalation therefore consumes at least $d$ distinct
 evaluations.
 \end{IEEEproof}
 

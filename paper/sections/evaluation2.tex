@@ -50,10 +50,9 @@ Cap & Avail. & Viol. & Avail. & Viol. & Avail. & Viol. \\
 \end{tabular}
 \end{table}
 
-Twelve seeds bound the noise. The 95\% confidence interval of \sys's
-availability, from Student's $t$ with eleven degrees of freedom, is at most
-$\pm0.008$; because every policy sees the same twelve traces, the paired
-difference is tighter still. At $1.0\eps$ \sys\ admits $4.4\pm0.2$ points fewer
+Twelve seeds bound the noise: the 95\% interval of \sys's availability, from
+Student's $t$ with eleven degrees of freedom, is at most $\pm0.008$, and the paired
+difference is tighter because every policy sees the same traces. At $1.0\eps$ \sys\ admits $4.4\pm0.2$ points fewer
 requests than exact blocking and $2.2\pm0.2$ fewer than static quota, while both
 baselines exceed the cap $12.7\pm0.3$ times per run against zero. Their accounting
 is deterministic, so the only quantity that varies across seeds is the violation

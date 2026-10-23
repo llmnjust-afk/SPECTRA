@@ -9,13 +9,35 @@ attempts against a subject whose cap funds exactly 100 charges; every thread cou
 2 to 16 admits exactly 100, spends exactly $1.0\eps$, and records zero violations.
 
 Injecting a crash at each step of the transaction tests
-Proposition~\ref{prop:atomic} directly (E19). Over every crash point, one and four
-threads, and a crash rate up to 5\%, no answer left without a committed charge, no
-transaction was charged twice, and in-flight spend never crossed the cap. A retry
-before the TTL reuses the reservation and charges once; a retry after it is refused and
-the hold returns. The cost is the crash rate itself---188 of 200 requests at
-5\%---plus one request in 800 blocked by a suspended hold. Three platforms with one
-ledger each spend 3.0 caps.
+Proposition~\ref{prop:atomic} directly (Table~\ref{tab:faults}, E19), with the
+invariants read off the ledger rather than off the caller's bookkeeping. Over every
+crash point, one and four threads, and a crash rate up to 5\%, no answer left without
+a committed charge, no transaction was charged twice, and in-flight spend never
+crossed the cap; the price is the crash rate itself, 188 of 200 requests delivered at
+5\%, plus one request in 800 blocked by a suspended hold. Three platforms with one
+ledger each, the last row, are the control that motivates the shared coordinator.
+
+\begin{table}[tb]
+\centering
+\caption{Fault injection at each settlement step (E19): one subject, cap
+$1.0\eps$, unit $0.05\eps$, five-second TTL, retry with the same id. A row is sound
+when answers never exceed commits.}
+\label{tab:faults}
+\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}llrrl@{}}
+\toprule
+Crash point & Retry & Ans. & Com. & Outcome \\
+\midrule
+none                        & ---       & 1 & 1 & delivered \\
+reserve or execute          & same id   & 1 & 1 & charged once \\
+reserve or execute          & after TTL & 0 & 0 & hold returned \\
+commit                      & any       & 0 & 1 & answer withheld \\
+\midrule
+per-platform ledgers        & ---       & 60 & 60 & $3.0\times$ cap \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 Throughput depends on the workload, and our earlier reading was too pessimistic. With
 every thread contending for one subject, striping buys nothing: four threads reach
@@ -25,10 +47,7 @@ threads reach 91.5k against 25.2k, a factor of 3.6, because a transaction waits 
 for the stripes it touches (E13, medians of three). Striping removes a serialisation
 point, not contention: concentrated traffic will not benefit.
 
-Served over loopback TCP, one client sustains 1.9k reserve-and-commit pairs per second
-at a median round trip of 201\,$\mu$s; four sustain 2.4k at 283\,$\mu$s with a p99 of
-16\,ms. The server saturates, so the limit is the interpreter, not the transport, and
-more needs subjects sharded across coordinators, which we have not built. The caveats
-are that the coordinator is one process, that the round trip is a loopback one, and
-that the Fabric adapter is a stub: a real ledger adds a commit round trip we did not
-measure.
+Served over loopback, one client sustains 1.9k pairs per second at a 201\,$\mu$s
+median round trip and four sustain 2.4k at 283\,$\mu$s, p99 16\,ms; the server
+saturates, so more needs sharding. Three caveats: one process, a loopback trip, and a
+stub ledger adapter that hides a real commit trip.

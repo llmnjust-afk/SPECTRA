@@ -4,24 +4,20 @@
 \subsection{Methodology}
 \label{sec:eval-method}
 
-We run on a two-vCPU container with 4\,GiB of RAM, CPython 3.11, and a single
-process. The host is deliberately small, so absolute latencies are a conservative upper
-bound.
-Experiments are repeated on three seeds and we report the mean, except the cap
-sweep, which the replication study reruns on twelve; per-seed rows
-are committed with the code.
+We run on a two-vCPU container with 4\,GiB of RAM, CPython 3.11 and a single
+process; the host is deliberately small, so absolute latencies are a conservative
+upper bound. Experiments use three seeds and report the mean, except the cap sweep,
+which the replication study reruns on twelve, and per-seed rows ship with the code.
 
 The generator produces $12{,}000$ requests from $40$ tenants over $1{,}500$
-subjects and three platforms, with subject popularity drawn from a truncated Zipf
-law of exponent $1.15$ over ranks and $15\%$ of requests touching more than one
-subject. Each subject carries a cap of $\eps{=}1.0$ at $\delta=10^{-5}$. The
-splitting attack adds an adversary controlling $12$ target subjects, divides a
-fixed budget of $0.30\eps$ per target into fragments, and issues them under
-distinct tenant identities across platforms; we sweep the fragment count from
-$12$ to $60$. Identities are drawn by inverse transform from the truncated law
-rather than by a power-law draw modulo the population, because the latter maps
-large ranks back onto small ones and removes exactly the heavy hitters that make
-accounting hard.
+subjects and three platforms, with popularity from a truncated Zipf law of exponent
+$1.15$ and $15\%$ of requests touching several subjects; every subject carries a cap
+of $\eps{=}1.0$ at $\delta=10^{-5}$. Identities are drawn by inverse transform
+rather than by a power-law draw modulo the population, because the latter maps large
+ranks back onto small ones and removes the heavy hitters that make accounting hard.
+The splitting attack gives an adversary $12$ target subjects, a budget of
+$0.30\eps$ per target and $k$ fragments from $12$ to $60$, issued under distinct
+identities across platforms.
 
 We compare against five policies: \emph{static quota}, a fixed per-tenant
 allowance that does not measure spend; \emph{token bucket}, a per-tenant rate
@@ -56,23 +52,22 @@ error is exactly zero at 2.1\,MB; it is not the configuration we deploy.
 The estimator costs 27--32\,$\mu$s per request across widths from $2^{10}$ to
 $2^{16}$, against 4.6\,$\mu$s for an exact table on the same trace: an 18\% rise
 for a sixteen-fold increase in width, as expected from eight memory accesses per
-update plus the hot-table lookup. The full admission path is slower and far more
-variable (E17): median 74\,$\mu$s, mean 223\,$\mu$s, p99 5.6\,ms over
-12{,}000 requests. Profiling attributes 46\% to the sketch and cost algebra, 14\%
-to the ledger, 12\% to the controller and 7\% to the accountant. The tail is one
-function, a tenant-pressure sweep that scans the hot table every 64 admissions:
-disabling it drops the mean to 108\,$\mu$s and the p99 to 0.47\,ms, so the sweep
-costs half the throughput and all of the tail.
+update plus the hot-table lookup. The full admission path is slower and far more variable
+(Fig.~\ref{fig:latency}a): median 74\,$\mu$s, mean 223\,$\mu$s, p99 5.6\,ms.
+Profiling attributes 46\% to the sketch and cost algebra, 14\% to the ledger, 12\%
+to the controller and 7\% to the accountant, and the tail is a single function, a
+tenant-pressure sweep that scans the hot table every 64 admissions. Disabling it
+buys back half the mean and almost all of the tail.
 
-A single-server queue over these service times gives the deployment picture. At
-50\% utilisation the median is 0.17\,ms but the p99 is 107\,ms, because one 5.6\,ms
-event stalls everything behind it; at 80\% the median is already 5.2\,ms. A load
-averaging 50\% that peaks at five times capacity for half a second makes the median
-0.93\,s. The path must be provisioned for its peak, not its mean.
+Queueing over those service times decides the deployment (Fig.~\ref{fig:latency}b):
+at 50\% utilisation the median is 0.17\,ms but the p99 is 107\,ms, because one
+5.6\,ms event stalls everything behind it, and a load that averages 50\% while
+peaking at five times capacity makes the median 0.93\,s. The path must be
+provisioned for its peak, not its mean.
 
-Memory tells the opposite story at small scale. For $5{,}000$ subjects the sketch
-occupies 5.57\,MB at width $2^{14}$ while the exact table occupies 1.28\,MB, so the
-sketch is 4.3 times \emph{larger}; the crossover is near $2\times10^{4}$ subjects.
+Memory tells the opposite story at small scale: at $5{,}000$ subjects the sketch
+occupies 5.57\,MB where the exact table needs 1.28\,MB, so the sketch is 4.3 times
+\emph{larger} and the crossover is near $2\times10^{4}$ subjects.
 Figure~\ref{fig:scale} measures the regime that matters: from $10^{3}$ to $10^{6}$
 subjects the exact accountant grows from 1.1\,MB to 264.6\,MB while the sketch stays
 at 4.70\,MB (width $2^{12}$) and 6.27\,MB (width $2^{14}$), a factor of 42 to 56 at
@@ -82,13 +77,23 @@ locality; the estimate stays one-sided, with maximum absolute error 0.057$\eps$.
 
 \begin{figure}[tb]
 \centering
-\includegraphics[width=0.94\columnwidth]{figures/fig7_scale.png}
-\caption{Accountant state and per-request cost as the subject population grows
-(E8). The exact accountant grows linearly with $N$; the sketch is flat in $N$
-and pays a modest per-key locality penalty. Zero under-estimates at every
-population.}
+\includegraphics[width=\columnwidth]{figures/fig7_scale.png}
+\caption{Accountant state as the subject population grows (E8). The exact
+accountant grows linearly with $N$; the sketch is flat in $N$ and pays a modest
+per-key locality penalty. Zero under-estimates at every population.}
 \label{fig:scale}
 \end{figure}
+
+\begin{figure}[tb]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig17_latency.png}
+\caption{Admission latency (E17, 12{,}000 requests, median of three trials). (a)
+Service time with and without the tenant-pressure sweep, log scale; the sweep is a
+diagnostic, not an option. (b) FCFS queue over the measured service times under
+Poisson arrivals and under a burst at five times the average rate.}
+\label{fig:latency}
+\end{figure}
+
 
 This shows that the structure answering windowed queries has memory independent
 of $N$, and that a naive windowed accountant---one cumulative structure per
