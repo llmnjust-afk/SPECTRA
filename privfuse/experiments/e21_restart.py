@@ -89,8 +89,24 @@ def _reconcile(answers_path: Path, wal: Path | None) -> dict[str, Any]:
             (cost.eps(EPS_DELTA) for cost in (ledger.committed(s) for s in spend)),
             default=0.0,
         )
+        from privfuse.accounting.online import OnlineAccountant, OnlineAccountantConfig
+        from privfuse.ledger.recovery import rebuild_estimator
+
+        accountant = OnlineAccountant(OnlineAccountantConfig())
+        restored = rebuild_estimator(accountant, ledger)
+        estimated = {
+            subject: accountant.estimate(subject).eps(EPS_DELTA)
+            for subject in spend
+        }
         result.update(
             {
+                "recovered_tx": float(restored),
+                "estimate_ge_truth": float(
+                    all(
+                        estimated[subject] >= cost.eps(EPS_DELTA) - 1e-9
+                        for subject, cost in spend.items()
+                    )
+                ),
                 "wal_records": float(ledger.replayed),
                 "torn_records": float(ledger.torn_records),
                 "free_answers": float(len(answered) - len(committed)),

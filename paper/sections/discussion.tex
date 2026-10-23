@@ -8,28 +8,28 @@ the one who pays. Treat the charge as a transaction with a commit point.
 
 A deployment would replicate the coordinator over consensus nodes, own each subject
 on one node so the critical section stays local, and shard by subject range; E22 takes
-the first step with separate processes on one host. That leaves a trust question: a
-subject's budget lives on one node, which could under-report a charge, and receipts
-make it detectable only afterwards. Closing it needs Byzantine agreement or a proof
-that the charge matches the mechanism executed.
+the first step with separate processes on one host. A subject's budget would then live
+on one node, which could under-report a charge, and receipts make that detectable only
+afterwards; closing it needs Byzantine agreement or a proof that the charge matches
+the mechanism executed.
 
 The accounting layer is itself sensitive: the ledger records which subjects appear
-in which queries, and the hot table is close to a list of the most-queried subjects,
-so a reader learns participation patterns without learning any answer. Accumulators,
+in which queries and the hot table is close to a list of the most-queried subjects, so
+a reader learns participation patterns without learning any answer. Accumulators,
 oblivious access or an enclave each cost something the design does not budget for;
 this is the most important open problem here.
 
-Three further limitations bound the claims. The SLO monitor samples the hot table,
-so its coverage depends on the hot capacity, and sampling the epoch ring directly is
-a fix we have not evaluated. An adversary that observes throttling and
-re-times its fragments is measured in E18: probing lifts its loss from 0.80 to 0.85 of
-the cap and stops there, because the key still binds it. An adversary that cycles subjects through the
-hot table is measured in E14: it costs accuracy and availability, never soundness.
+Three further limitations bound the claims. The SLO monitor samples the hot table, so
+its coverage depends on the hot capacity, and sampling the epoch ring directly is a fix
+we have not evaluated. Two adversaries are measured: one that observes throttling and
+re-times its fragments (E18, loss 0.80 to 0.85 of the cap, because the key still binds
+it) and one that cycles subjects through the hot table (E14, costing accuracy and
+availability but never soundness).
 
 Two conditions would falsify the approach. If a population is small and its policy
-cumulative, exact counting is cheaper, as our ablation shows at $1{,}500$ subjects;
-with one platform, a subject-keyed quota is sound but a tenant-keyed one is not. And if
-a query's cost cannot be predicted before execution, admission must price
-conservatively or fall back to post-hoc charging, weakening the guarantee to the one
-auditing provides. The design is for what remains: many subjects, several platforms,
-many tenants, and a promise that holds before the answer leaves the building.
+cumulative, exact counting is cheaper (our ablation, $1{,}500$ subjects); with one
+platform a subject-keyed quota is sound, a tenant-keyed one is not. And if a query's
+cost cannot be predicted before execution, admission must price conservatively or fall
+back to post-hoc charging, weakening the guarantee to the one auditing provides. The
+design is for what remains: many subjects, several platforms, many tenants, and a
+promise that holds before the answer leaves the building.

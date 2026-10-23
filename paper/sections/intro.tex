@@ -8,20 +8,19 @@ have made the settlement half of this exchange almost routine, with smart
 contracts escrowing payment and releasing keys against
 delivery~\cite{liu2025yotta}. The privacy half has not kept pace. A platform can
 prove that a tenant paid, and that a delivered object matches a committed digest,
-but it cannot say whether answering one more query would push some subject past
-the privacy budget the platform promised when the data was collected. That question concerns the
-accumulated transcript of every query that touched the subject, from every tenant
-and every platform.
+but it cannot say whether one more answer would push some subject past the privacy
+budget promised when the data was collected---a question about the accumulated
+transcript of every query that touched that subject, from every tenant and platform.
 
 Differential privacy (DP) supplies the language for exactly this kind of
 statement~\cite{fioretto2024differential,desfontaines2019differential}. Its
 guarantee is compositional: charging each release against a
 per-subject budget bounds the leakage of the whole
-transcript~\cite{mironov2017renyi,bun2016concentrated}. Governance treats the budget as a policy parameter rather than a
-running quantity that must be measured, reserved and settled~\cite{kapp2024collection}:
-it is compiled into documents, tallied in offline jobs, and reconciled at the end of
-a period, while auditing tools estimate after the fact whether released artifacts
-respected it~\cite{cohen2018linear,ganev2026tight,modi2026revisiting}.
+transcript~\cite{mironov2017renyi,bun2016concentrated}. Governance treats the budget as a policy parameter rather than a running quantity
+that must be measured, reserved and settled~\cite{kapp2024collection}: it is compiled
+into documents, tallied in offline jobs and reconciled later, while auditing tools
+estimate after the fact whether released artifacts respected
+it~\cite{cohen2018linear,ganev2026tight,modi2026revisiting}.
 
 Retrospective accounting is defensible when a single curator releases a fixed set
 of statistics. It fails in a market, for three reasons that compound. First, the
@@ -61,7 +60,7 @@ protocol with a subject-striped coordinator makes admission atomic, idempotent,
 and robust to a crash between reserve and commit. The composition algebra is
 zero-concentrated DP, chosen not for tightness but because it is closed-form and
 invertible: admission must price a query and calibrate a target budget in tens of
-microseconds at the median, with a millisecond tail, and the discrete order grid of R\'enyi DP cannot calibrate small
+microseconds at the median, with a millisecond tail, and a R\'enyi grid capped at $\alpha_{\max}{=}512$ cannot calibrate small
 targets at all (Section~\ref{sec:eval-backend}).
 
 This paper makes four contributions.

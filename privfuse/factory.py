@@ -93,4 +93,6 @@ def build_privfuse(
             window=cfg.window,
         ),
     )
+    if cfg.wal_path:
+        controller.recover()
     return PrivFusePolicy(controller)

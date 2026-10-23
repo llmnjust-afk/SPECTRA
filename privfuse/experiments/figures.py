@@ -14,7 +14,7 @@ from privfuse.experiments.common import FIGURES, RESULTS
 
 LABELS = {
     "privfuse": "PrivFuse",
-    "exact_blocking": "exact per-tenant",
+    "exact_blocking": "exact per-platform",
     "exact_global": "exact global",
     "static_quota": "static quota",
     "token_bucket": "token bucket",

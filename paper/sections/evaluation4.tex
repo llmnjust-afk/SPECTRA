@@ -10,14 +10,14 @@ breaker can only admit or refuse, costs 4.2 points of availability (0.881 agains
 on 1{,}500 subjects the hot table holds everyone who matters.
 
 Churn is the cost the capacity sweep hides (E14, Fig.~\ref{fig:slo}b): rotating 400
-new heavy subjects per epoch raises the mean over-estimate from 0.16 to 0.28 at
-$0.15\eps$ and from 0.25 to 0.65 at $1.0\eps$, and the p99 from 1.7 to 5.1$\times$.
-Safety is untouched---zero violations in 30 runs---because an evicted subject is
-re-seeded from the sketch upper bound, but the table stops paying for itself.
+heavy subjects per epoch raises the mean over-estimate from 0.16 to 0.28 at $0.15\eps$
+and from 0.25 to 0.65 at $1.0\eps$, and the p99 from 1.7 to 5.1$\times$. Safety is
+untouched---zero violations in 30 runs---because an evicted subject is re-seeded from
+the sketch, but the table stops paying for itself.
 
 Disabling the table raises availability from 0.923 to 0.930 and lowers cost from 101
-to 80\,$\mu$s, but the breaker never flaps: the monitor samples its rate from the hot
-table, so ablating the table silently ablates the monitor.
+to 80\,$\mu$s, but the monitor samples its rate from that table, so ablating the table
+silently ablates the monitor.
 
 
 
@@ -31,8 +31,8 @@ reaches 1.000 against 0.906 with one lifetime violation. Putting the
 exact table behind the same ring, breaker and coordinator isolates approximation
 from functionality (E20): availability and windowed peak are equal at
 both caps, the exact version is 1.5$\times$ faster (233 against 156\,$\mu$s) and uses 0.37\,MB against 5.01\,MB accounted. At $10^{3}$ subjects the sketch
-buys nothing but the slope; measured from $10^{3}$ to $10^{6}$, that slope ends at
-553\,MB resident against 5.8\,MB, a sketch footprint that does not move (E23).
+buys nothing but the slope; measured from $10^{3}$ to $10^{6}$ with four live tables,
+that slope ends at 1.2\,GB resident against 10.6\,MB (E23).
 
 On a load oscillating around the threshold, hysteresis and dwell give the breaker
 zero transitions; without them, 26, of which 13 are reversals.
@@ -55,10 +55,11 @@ admission must search rather than invert.
 \subsection{What Soundness Costs in Utility}
 \label{sec:eval-utility}
 
-The utility experiment puts a real dataset behind the cap: a tenant repeatedly
-requests the class-conditional sufficient statistics of a binary classification
-task, each release noised by a Gaussian mechanism, and a Gaussian naive Bayes
-classifier fitted to the noisy statistics is scored on held-out data. At
+The utility experiment puts a real dataset behind the cap: the UCI breast-cancer set
+(569 records, 30 features). A tenant repeatedly requests the class-conditional
+sufficient statistics of the binary label, each release noised by a Gaussian
+mechanism, and a Gaussian naive Bayes classifier fitted to the noisy statistics is
+scored on held-out data. At
 $\eps_q{=}1.0$ \sys\ answers one query at 0.823, against 0.900 for an unbounded
 policy that answers 100 queries regardless of cost; at $0.5\eps$ two queries at 0.552
 against 0.881; at $0.25\eps$ four at 0.542 against 0.871, and both baselines exceed

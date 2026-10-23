@@ -4,17 +4,17 @@
 \subsection{Methodology}
 \label{sec:eval-method}
 
-We run on a two-vCPU container with 4\,GiB of RAM, CPython 3.11 and a single
-process; the host is deliberately small, so absolute latencies are a conservative
-upper bound. Experiments use three seeds and report the mean, except the cap sweep,
-which the replication study reruns on twelve, and per-seed rows ship with the code.
+We run on a two-vCPU container with 4\,GiB of RAM and CPython 3.11; the host is
+deliberately small, so absolute latencies are a conservative upper bound. Experiments
+use three seeds and report the mean, except the cap sweep, which is rerun on twelve;
+per-seed rows ship with the code.
 
 The generator produces $12{,}000$ requests from $40$ tenants over $1{,}500$
 subjects and three platforms, with popularity from a truncated Zipf law of exponent
 $1.15$ and $15\%$ of requests touching several subjects; every subject carries a cap
-of $\eps{=}1.0$ at $\delta=10^{-5}$. Identities are drawn by inverse transform: a power-law draw modulo the population
-folds large ranks back onto small ones and removes the heavy hitters that make
-accounting hard.
+of $\eps{=}1.0$ at $\delta=10^{-5}$. Identities are drawn by inverse transform, so
+large ranks fold back onto small ones and the heavy hitters that make accounting hard
+survive.
 The splitting attack gives an adversary $12$ target subjects, a budget of
 $0.30\eps$ per target and $k$ fragments from $12$ to $60$, issued under distinct
 identities across platforms.
@@ -23,9 +23,9 @@ We compare against five policies: \emph{static quota}, a fixed per-platform
 allowance that meters spend but can neither throttle nor window it; \emph{token
 bucket}, a per-subject allowance that refills at $0.05\eps$ per second; \emph{audit only}, which admits everything and
 flags subjects afterwards and is the deployed status quo; \emph{exact blocking},
-the same per-platform counters with the check applied to composed spend; and
-\emph{exact global}, which keeps exact per-subject counters shared across tenants
-and platforms but has no window, no breaker and no degradation. \sys\ is the only
+per-platform counters checked against composed spend; and \emph{exact global}, exact
+per-subject counters shared across tenants and platforms, with no window, breaker or
+degradation. \sys\ is the only
 policy that is subject-keyed across platforms, time-structured and memory-bounded in
 its estimator.
 

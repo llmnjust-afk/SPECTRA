@@ -58,3 +58,26 @@ def test_torn_tail_is_truncated_not_fatal(tmp_path):
     assert final.state("t2") is State.RESERVED
     assert final.torn_records == 0
     final.close()
+
+
+def test_estimator_rebuilds_from_committed_charges(tmp_path) -> None:
+    """A restart must not leave the windowed estimator empty."""
+    from privfuse.accounting.online import OnlineAccountant, OnlineAccountantConfig
+    from privfuse.ledger.ledger import Coordinator
+    from privfuse.ledger.recovery import rebuild_estimator
+
+    path = str(tmp_path / "wal.log")
+    cost = CostVector(eps_pure=0.1, rho=0.0, delta=0.0)
+    first = Coordinator(caps={"s": 5.0}, ttl=30.0, ledger=DurableLedger(path, ttl=30.0))
+    for index in range(4):
+        first.try_reserve(f"tx{index}", "t", "p0", {"s": cost}, now=float(index))
+        first.commit(f"tx{index}", now=float(index))
+    first.ledger.close()
+
+    second = Coordinator(caps={"s": 5.0}, ttl=30.0, ledger=DurableLedger(path, ttl=30.0))
+    accountant = OnlineAccountant(OnlineAccountantConfig(epoch_seconds=1.0, ring_size=8))
+    restored = rebuild_estimator(accountant, second.ledger)
+    assert restored == 4
+    assert accountant.estimate("s").eps(1e-5) >= 0.4 - 1e-9
+    assert accountant.upper_bound("s").eps(1e-5) >= 0.4 - 1e-9
+    second.ledger.close()

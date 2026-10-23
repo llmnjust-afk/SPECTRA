@@ -99,6 +99,12 @@ class AdmissionController:
         self._tenant_refresh = 64
         self._subject_tenant: dict[str, str] = {}
 
+    def recover(self) -> int:
+        """Rebuild the estimator from committed charges (see ``rebuild_estimator``)."""
+        from privfuse.ledger.recovery import rebuild_estimator
+
+        return rebuild_estimator(self.accountant, self.coordinator.ledger)
+
     def _subject_pressure(self, subject: str, now: float) -> float:
         """Pressure against the cumulative hard cap.
 

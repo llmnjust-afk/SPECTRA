@@ -22,14 +22,13 @@ make the ledger exact and the estimator one-sided, and Section~\ref{sec:analysis
 proves that the composition preserves both properties.
 
 Figure~\ref{fig:arch} shows the request path. A query arrives with a declared
-sensitivity and target $\eps$, and the pricer converts it into a cost vector. The
-breaker combines subject-level pressure from the estimator with tenant-level
-pressure from the observed soft-violation rate and selects a mode. In
-\textsc{normal} mode the full cost is reserved; in \textsc{throttle} mode the
-query is answered with a reduced charge, hence more noise and less utility; in
-\textsc{reject} mode it is refused without touching data. Reservation is
-two-phase against the ledger, and only a committed charge is published to the
-estimator, so a failed execution costs the subject nothing.
+sensitivity and target $\eps$ and the pricer converts it into a cost vector; the
+breaker combines subject pressure from the estimator with tenant pressure from the
+observed soft-violation rate and selects a mode. In \textsc{normal} mode the full cost
+is reserved, in \textsc{throttle} mode the query is answered at a reduced charge (more
+noise, less utility), and in \textsc{reject} mode it is refused without touching data.
+Reservation is two-phase, and only a committed charge reaches the estimator, so a
+failed execution costs the subject nothing.
 
 \begin{figure*}[tb]
 \centering

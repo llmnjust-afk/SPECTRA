@@ -9,9 +9,8 @@ privacy~\cite{dwork2006differential} if for every pair of neighbouring datasets 
 and every event $S$, $\Pr[M(D)\in S]\le e^{\eps}\Pr[M(D')\in S]+\delta$. The
 definition is per-release, but composition carries it to a transcript, which is what
 lets a platform promise a bound on \emph{total} leakage rather than on each answer,
-and why the promise needs bookkeeping. R\'enyi DP~\cite{mironov2017renyi} gives sharp
-constants for a fixed number of adaptively chosen mechanisms, at the cost of a
-discrete order grid.
+and why that promise needs bookkeeping. R\'enyi DP~\cite{mironov2017renyi} gives sharp
+constants for adaptively chosen mechanisms, at the cost of a discrete order grid.
 Zero-concentrated DP~\cite{bun2016concentrated} bounds the R\'enyi divergence of
 order $1+\alpha$ by $\rho\alpha$ for all $\alpha>1$, composes by adding $\rho$,
 and converts in closed form,

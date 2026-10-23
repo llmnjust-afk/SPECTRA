@@ -2,7 +2,7 @@
 \label{sec:impl}
 
 \sys\ is a reference implementation in Python 3.11: about 6{,}400 lines across 55
-modules with 51 tests. The enforcement core depends only on the standard
+modules with 56 tests. The enforcement core depends only on the standard
 library; NumPy, pandas and matplotlib are used by the experiment drivers, so the
 measured per-request cost is not an artefact of a numerical stack.
 
@@ -12,9 +12,7 @@ Hyperledger Fabric adapter that raises \texttt{NotImplementedError}; the
 coordinator's safety argument does not depend on the backend, which sees only
 reserve, commit and release, but we do not measure Fabric latency, so our numbers bound
 the protocol rather than the settlement path. The attester is null: verifying that a platform ran the mechanism it charged for
-needs remote attestation or verifiable computation. Coordinator durability is the
-backend's: the log has to fsync the commit before the answer leaves.
-Every run is seeded and writes raw rows with metadata, so one command
-regenerates every table and figure. An
-anonymized artifact with the sources, drivers and raw rows accompanies the
-submission.
+needs remote attestation or verifiable computation. On restart the committed charges are replayed into the estimator before the
+coordinator admits anything (E21), so the windowed view returns with the log rather
+than empty. Every run is seeded and writes raw rows, so one command regenerates every
+table and figure; an anonymized artifact accompanies the submission.

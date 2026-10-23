@@ -13,6 +13,8 @@ vector for reporting.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import threading
 import zlib
 from contextlib import contextmanager
@@ -45,6 +47,7 @@ class Reservation:
     expires: float
     state: State = State.RESERVED
     committed_at: float | None = None
+    fingerprint: str = ""
 
 
 class SettlementLedger:
@@ -65,6 +68,26 @@ class SettlementLedger:
         self.commits = 0
         self.releases = 0
 
+    @staticmethod
+    def fingerprint(tenant: str, platform: str, costs: dict[str, CostVector]) -> str:
+        """Canonical hash of everything a transaction commits to.
+
+        Retrying with the same identifier is legal only if the payload is the
+        same; otherwise a caller could reserve against one subject and execute
+        another under the same charge.
+        """
+        payload = {
+            "tenant": tenant,
+            "platform": platform,
+            "costs": {
+                subject: [cost.eps_pure, cost.rho, cost.delta]
+                for subject, cost in sorted(costs.items())
+            },
+        }
+        return hashlib.sha256(
+            json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+
     def reserve(
         self,
         tx_id: str,
@@ -77,6 +100,10 @@ class SettlementLedger:
         if existing is not None:
             if existing.tenant != tenant or existing.platform != platform:
                 raise LedgerError(f"transaction id {tx_id!r} reused by another tenant")
+            if existing.fingerprint != self.fingerprint(tenant, platform, costs):
+                raise LedgerError(
+                    f"transaction id {tx_id!r} reused with a different charge"
+                )
             if existing.state is State.RESERVED:
                 return existing
             raise LedgerError(f"transaction {tx_id!r} already {existing.state.value}")
@@ -87,6 +114,7 @@ class SettlementLedger:
             costs=dict(costs),
             created=now,
             expires=now + self.ttl,
+            fingerprint=self.fingerprint(tenant, platform, costs),
         )
         self._reservations[tx_id] = res
         for subject, cost in costs.items():
@@ -154,6 +182,13 @@ class SettlementLedger:
 
     def remaining_eps(self, subject: str, cap_eps: float) -> float:
         return cap_eps - self.in_flight_eps(subject)
+
+    def committed_reservations(self) -> list[Reservation]:
+        """Committed transactions in commit order, for estimator replay."""
+        return sorted(
+            (r for r in self._reservations.values() if r.state is State.COMMITTED),
+            key=lambda r: (r.committed_at is None, r.committed_at or 0.0),
+        )
 
     def get(self, tx_id: str) -> Reservation | None:
         return self._reservations.get(tx_id)

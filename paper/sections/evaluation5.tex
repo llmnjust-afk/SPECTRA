@@ -1,7 +1,9 @@
 \subsection{Settlement and Concurrency}
 \label{sec:eval-concurrency}
 
-Five settlement invariants pass, among them the refusal to re-bind a reserve. In the
+Five settlement invariants pass, among them the refusal to re-bind a reserve: the
+identifier is bound to a fingerprint of tenant, platform, support and charge, so a
+retry that changes any of them is refused rather than silently reused (tests, E22). In the
 atomicity test, 16 threads issue 3{,}200 attempts against a subject whose cap funds 100
 charges; every thread count admits exactly 100, $1.0\eps$ and zero violations.
 
@@ -37,22 +39,19 @@ per-platform ledgers        & ---       & 60 & 60 & $3.0\times$ cap \\
 \end{table}
 
 E19 keeps the ledger alive; E21 kills the process. Six SIGKILLs at the four
-settlement steps, each followed by replay and restart, deliver 389 answers, none
-uncharged, at a worst client-side spend of 0.191$\eps$ against a $0.2\eps$ cap. The
-same schedule on an in-memory ledger delivers 571 and pushes five of ten subjects
-past the cap, the worst to $2.1\times$: a restart that forgets is a budget reset.
-Durability costs 76\,$\mu$s per transition against 7.5\,$\mu$s in memory.
+settlement steps deliver 389 answers, none uncharged, at 0.191$\eps$ against a
+$0.2\eps$ cap; the same schedule on an in-memory ledger delivers 571 and pushes five
+of ten subjects past the cap, the worst to $2.1\times$---a restart that forgets is a
+budget reset. Durability costs 76\,$\mu$s per transition against 7.5\,$\mu$s.
 
 Striping pays only for disjoint subjects (E13, medians of three): four threads reach
-21.4k reserve-and-commit operations per second on one subject against 26.5k for a
-global lock, and 91.5k on disjoint subjects against 25.2k. It removes a serialisation
-point, not contention.
+21.4k operations per second on one subject against 26.5k for a global lock, and 91.5k
+on disjoint subjects against 25.2k---it removes a serialisation point, not contention.
 
-Three platform processes against a coordinator process of their own reach 237
-answers per second with each step fsynced (E22); killing that coordinator
-mid-trace and restarting it from the log costs 1.05\,s and 7\% of steady-state
-throughput, and still delivers 760 answers, none uncharged, no duplicate charge, and
-a worst client spend of $0.38\eps$ against $0.5\eps$. One client alone over
-loopback sustains 1.9k pairs per second at a 201\,$\mu$s median round trip. The
-caveats are one host, a loopback trip, and a stub adapter that hides the real commit
-trip.
+Three platform processes against a coordinator process of their own reach about 230
+answers per second with each step fsynced (E22); killing that coordinator mid-trace
+and restarting it from the log costs $\approx$1.1\,s and a few percent of throughput,
+and still delivers 760 answers, none uncharged, no duplicate charge, and a worst
+client spend of $0.38\eps$ against $0.5\eps$. One client over loopback sustains 1.9k
+pairs per second at a 201\,$\mu$s median round trip. The caveats are one host, a
+loopback trip, and a stub adapter that hides the real commit trip.

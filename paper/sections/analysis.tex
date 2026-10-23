@@ -8,10 +8,12 @@ identifier.
 
 \begin{proposition}[One-sidedness]
 \label{prop:onesided}
-For every subject $s$ and time $t$, the cumulative estimate satisfies
-$\hat{\spend}_s(t)\succeq\spend_s(t)$, and the windowed estimate
+For every subject $s$ and time $t$ between a restart and its replay, the cumulative
+estimate satisfies $\hat{\spend}_s(t)\succeq\spend_s(t)$, and the windowed estimate
 $\hat{\spend}_s(t,W)$ satisfies $\hat{\spend}_s(t,W)\succeq\spend_s(t,W)$, where
-the comparison is componentwise on $(\eps_{\mathrm{pure}},\rho)$.
+the comparison is componentwise on $(\eps_{\mathrm{pure}},\rho)$. The estimator is
+rebuilt from the committed log before the restarted coordinator admits anything, so
+the bound holds across restarts as well (E21).
 \end{proposition}
 
 \begin{IEEEproof}

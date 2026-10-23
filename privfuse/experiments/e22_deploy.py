@@ -61,10 +61,7 @@ class _Handler(socketserver.StreamRequestHandler):
                 if state is State.COMMITTED:
                     self.wfile.write(b"+")
                     continue
-                if state is State.RESERVED:
-                    self.wfile.write(b"+")
-                    continue
-                if state is not None:
+                if state is not None and state is not State.RESERVED:
                     self.wfile.write(b"-")
                     continue
                 cost = CostVector(eps_pure=float(eps_pure), rho=float(rho), delta=0.0)

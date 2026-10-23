@@ -6,8 +6,8 @@ Count-Min sketches, one over $\eps_{\mathrm{pure}}$ and one over $\rho$, so that
 mixed pure-DP and zCDP charges compose without conversion on the hot path. An
 \emph{epoch ring} is a bounded deque of epochs, each with its own pair of
 sketches, supplying the windowed view of \eqref{eq:window}. A \emph{hot table}
-holds the $H$ subjects with the largest accumulated charge exactly, because those
-are the subjects whose budgets bind.
+holds the $H$ subjects with the largest accumulated charge exactly since their
+admission, because those are the subjects whose budgets bind.
 
 For key $s$ and cost $c$, the conservative update computes
 $m_j=\min_{r} A_j[r,h_{j,r}(s)]$ per layer and raises every cell on $s$'s row

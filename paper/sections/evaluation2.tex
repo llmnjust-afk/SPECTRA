@@ -6,24 +6,25 @@ averaged over twelve seeds. At a cap of $\eps{=}1.0$, \sys\ admits 0.934 of requ
 and produces no hard-cap violation, while exact per-platform blocking admits 0.978 and
 lets 12.7 subjects exceed the cap on average, the worst of them reaching $1.69\eps$.
 Static quota behaves similarly at 0.956 availability and the same violation count.
-Their counters are exact; the violations come from the key: a subject charged
-against forty tenant budgets can accumulate forty times the cap, and natural traffic
-alone pushes a dozen subjects past it. Fig.~\ref{fig:attack} sweeps the fragment count at a fixed adversary budget.
+Their counters are exact; the violations come from the key: each platform meters
+its own share, so a subject with records everywhere is charged once per platform and
+accumulates up to three times the cap, and natural traffic alone pushes a dozen
+subjects past it. Fig.~\ref{fig:attack} sweeps the fragment count at a fixed adversary budget.
 
 An adversary that sees the decision can re-plan (E18): halving a fragment after each
 refusal raises \sys's composed loss from 0.80 to 0.85 of the cap, still inside the
 hard cap, but raises static quota from 1.30 to 1.74 and exact blocking from 1.69 to
 1.76. A smaller request is cheaper and slips under a quota that refused the full
-fragment; a keyed account still charges it. Spreading attempts over forty tenants
-and three platforms changes nothing---identity is not the key.
+fragment; a keyed account still charges it. Spreading attempts over forty tenants changes
+nothing---identity is not the key---but spreading them over three platforms pays,
+because each meters its own counter.
 
 The availability gap is the price of soundness and it shrinks as the cap loosens:
-13.6 points at $0.5\eps$, 10.2 at $0.75\eps$, 4.4 at $1.0\eps$, 3.4 at $1.5\eps$,
-and nothing at $2.0\eps$, where \sys\ reaches full availability while the baselines
-still violate the cap twelve times per run. The reason is that the soft threshold at
-$0.8E$ stops binding, and \sys\ then behaves like exact global accounting. The cap
-of $3.0\eps$ is a control: no policy violates it, since the trace's natural maximum is
-$2.01\eps$.
+13.6 points at $0.5\eps$, 4.4 at $1.0\eps$, 3.4 at $1.5\eps$, and nothing at
+$2.0\eps$, where the soft threshold at $0.8E$ stops binding and \sys\ behaves like
+exact global accounting while the baselines still violate the cap twelve times per
+run. The cap of $3.0\eps$ is a control: no policy violates it, since the trace's
+natural maximum is $2.01\eps$.
 
 \begin{table}[tb]
 \centering
