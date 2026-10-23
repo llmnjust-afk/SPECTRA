@@ -194,10 +194,11 @@ class Coordinator:
         ttl: float = 30.0,
         delta: float = 1e-5,
         striped: bool = True,
+        ledger: SettlementLedger | None = None,
     ) -> None:
         self.caps = dict(caps)
         self.delta = float(delta)
-        self.ledger = SettlementLedger(ttl=ttl, delta=delta)
+        self.ledger = ledger if ledger is not None else SettlementLedger(ttl=ttl, delta=delta)
         self.rejections = 0
         self.striped = bool(striped)
         self._global = threading.RLock()

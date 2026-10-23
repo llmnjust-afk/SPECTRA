@@ -37,15 +37,19 @@ per-platform ledgers        & ---       & 60 & 60 & $3.0\times$ cap \\
 \end{tabular}
 \end{table}
 
-Throughput depends on the workload, and our earlier reading was too pessimistic. With
-every thread contending for one subject, striping buys nothing: four threads reach
-21.4k reserve-and-commit operations per second against 26.5k for a single global lock,
-and even one thread is 28\% slower. With disjoint subjects the same code scales: four
-threads reach 91.5k against 25.2k, a factor of 3.6, because a transaction waits only
-for the stripes it touches (E13, medians of three). Striping removes a serialisation
-point, not contention: concentrated traffic will not benefit.
+E19 keeps the ledger alive; E21 kills the process. Six SIGKILLs at the four
+settlement steps, each followed by replay and restart, deliver 389 answers, none
+uncharged, at a worst client-side spend of 0.191$\eps$ against a $0.2\eps$ cap. The
+same schedule on an in-memory ledger delivers 571 and pushes five of ten subjects
+past the cap, the worst to $2.1\times$: a restart that forgets is a budget reset.
+Durability costs 76\,$\mu$s per transition against 7.5\,$\mu$s in memory.
 
-Served over loopback, one client sustains 1.9k pairs per second at a 201\,$\mu$s
-median round trip and four sustain 2.4k at 283\,$\mu$s, p99 16\,ms; the server
-saturates, so more needs sharding. Three caveats: one process, a loopback trip, and a
-stub ledger adapter that hides a real commit trip.
+Striping pays only for disjoint subjects (E13, medians of three): four threads reach
+21.4k reserve-and-commit operations per second on one subject against 26.5k for a
+global lock, and 91.5k on disjoint subjects against 25.2k. It removes a serialisation
+point, not contention.
+
+Over loopback one client sustains 1.9k pairs per second at a 201\,$\mu$s median
+round trip, four sustain 2.4k at 283\,$\mu$s (p99 16\,ms), and the server saturates.
+The caveats are one process, a loopback trip, and a stub adapter that hides a real
+commit trip.

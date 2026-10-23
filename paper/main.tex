@@ -45,7 +45,7 @@ the population together with a guarantee that spend is
 never underestimated. Second, budget accounting is a transaction rather than an
 increment, so reservation, commit and release are separated behind a
 subject-striped coordinator that charges each admitted query once even when
-clients retry or a platform dies mid-query. Third, windowed SLOs with a
+clients retry, a platform dies mid-query, or the coordinator restarts behind a durable log. Third, windowed SLOs with a
 hysteretic breaker turn a cumulative bound into predictable degradation. On
 synthetic populations of up to $10^6$ subjects, \sys\ bounds estimator memory at
 4.7\,MB where exact

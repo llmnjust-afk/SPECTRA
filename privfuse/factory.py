@@ -11,6 +11,7 @@ from privfuse.accounting.online import (
 )
 from privfuse.control.admission import AdmissionConfig, AdmissionController
 from privfuse.control.breaker import BreakerConfig, BreakerController
+from privfuse.ledger.durable import DurableLedger
 from privfuse.ledger.ledger import Coordinator
 from privfuse.platform.policy import PrivFusePolicy
 from privfuse.slo.spec import SLOSpec
@@ -36,6 +37,7 @@ class PrivFuseConfig:
     ttl: float = 30.0
     use_hot: bool = True
     exact: bool = False
+    wal_path: str | None = None
 
 
 def build_privfuse(
@@ -66,7 +68,12 @@ def build_privfuse(
             exact=cfg.exact,
         )
     )
-    coordinator = Coordinator(caps=trace.caps, ttl=cfg.ttl, delta=delta)
+    ledger = (
+        DurableLedger(cfg.wal_path, ttl=cfg.ttl, delta=delta)
+        if cfg.wal_path
+        else None
+    )
+    coordinator = Coordinator(caps=trace.caps, ttl=cfg.ttl, delta=delta, ledger=ledger)
     breaker = BreakerController(
         BreakerConfig(
             throttle_ratio=cfg.throttle_ratio,

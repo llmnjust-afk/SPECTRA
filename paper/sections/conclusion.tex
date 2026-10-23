@@ -2,18 +2,17 @@
 \label{sec:conclusion}
 
 Privacy budgets in data markets are enforced after the fact, keyed on the party that
-pays, and reconciled outside the transaction that spends them. Each choice is
-reasonable alone; together they let a tenant split its traffic, release the answer
-before the overspend is known, and lose the charge on a crash. \sys\ moves the decision to
+pays, and reconciled outside the transaction that spends them. Together they let a tenant split
+its traffic, release the answer before the overspend is known, and lose the charge on a
+crash. \sys\ moves the decision to
 admission around three commitments---an exact ledger where settlement requires
 exactness, a one-sided sketch where time makes exactness unaffordable, and a
 two-phase reservation where atomicity separates a budget from a guess. On a million
 subjects the estimator holds 4.7\,MB where exact accounting needs 265\,MB;
 enforcement admits 0.93 of requests at $1.0\eps$ with no violations where per-platform
 blocking admits 0.98 and breaches the cap a dozen times; the escape ratio under a
-splitting tenant stays at 0.82 where policies without a subject key reach 2.43. The
-cost is measurable---4.4 points of availability at $1.0\eps$, 4.2 without
-degradation, a striping benefit only for disjoint subjects---and we report it with
-the gains.
+splitting tenant stays at 0.82 where policies without a subject key reach 2.43. The cost is measurable---4.4 points of availability at $1.0\eps$, 4.2 without
+degradation, striping that pays only for disjoint subjects---and we report it with the
+gains.
 The next step is to make the accounting state private and to replace the trust in one
 coordinator with a proof that the charge matches the mechanism that ran.

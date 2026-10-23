@@ -1,20 +1,19 @@
 \section{Discussion}
 \label{sec:discussion}
 
-Three principles transfer better than the specific parameters. Split the accounting
-state by the kind of question it answers: exact where the quantity is money and must
-be settled, one-sided where it has time structure and must be cheap. Key every charge
-on the party that bears the loss, not the party that pays, because that gap is the
-one an adversary exploits. Treat the charge as a transaction with a commit point,
-because a counter without one is eventually incremented twice or not at all.
+Three principles transfer. Split the accounting state by the question it answers:
+exact where the quantity is money and must be settled, one-sided where it has time
+structure and must be cheap. Key every charge on the party that bears the loss, not
+the one who pays. Treat the charge as a transaction with a commit point, or it will
+eventually be incremented twice or not at all.
 
-The deployment path we have in mind replicates the coordinator across a few consensus
-nodes, owns each subject on one node so the critical section stays local, and shards
-the ledger by subject range. That removes the single-process bottleneck but leaves a
-trust question: a subject's budget lives on one node, and a malicious node could
-under-report a charge. Signed receipts make that detectable after the fact, which is
-weaker than the guarantee inside one process; closing it needs Byzantine agreement or
-a proof that the charge matches the mechanism executed.
+A deployment would replicate the coordinator over a few consensus nodes, own each
+subject on one node so the critical section stays local, and shard the ledger by
+subject range. That removes the single-process bottleneck but leaves a trust question:
+a subject's budget lives on one node, which could under-report a charge. Signed
+receipts make that detectable afterwards, which is weaker than the guarantee inside one
+process; closing it needs Byzantine agreement or a proof that the charge matches the
+mechanism executed.
 
 The accounting layer is itself sensitive: the ledger records which subjects appear in
 which queries, and the hot table is close to a list of the most-queried subjects, so a

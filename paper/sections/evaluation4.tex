@@ -53,9 +53,8 @@ $\eps_q{=}0.02$ sits below the floor, so no scale on this grid certifies it: our
 implementation saturates at $\sigma=1000$, 4.17 times the zCDP scale, and reports
 $\eps{=}0.023$ with \texttt{reached\_target} false rather than accepting the query.
 Basic composition needs $\sigma=240$ for the same target but reports $0.2008$ after
-100 charges, ten times zCDP's budget. At $\eps_q{=}0.1$ the three backends agree to
-within 0.004\% in $\sigma$ and in composed $\eps$ (1.0195 against 1.0194), and at
-$0.5$ to within 0.006\%. The conclusion is narrow. At these targets zCDP calibrates in
+100 charges, ten times zCDP's budget. At $\eps_q{=}0.1$ the three backends agree to within 0.004\% in $\sigma$ and in
+composed $\eps$, and at $0.5$ to within 0.006\%. The conclusion is narrow. At these targets zCDP calibrates in
 closed form and composes without the order-grid floor; a R\'enyi grid extended to
 $\alpha_{\max}\ge1{,}200$ would also calibrate $\eps_q{=}0.02$, at the price of an
 order-dependent conversion that admission must search rather than invert. R\'enyi DP

@@ -276,6 +276,41 @@ approximation is free.
 `results/e20_equiv.csv` holds the rows; `results/e20_equiv_meta.json` records that
 the only difference between the two policies is the accountant store.
 
+## E21: killing the coordinator
+
+E19 injects faults inside one process and keeps the ledger alive, so it cannot
+show what a restart does to committed charges. E21 removes that assumption. A
+worker process (`privfuse/experiments/_e21_worker.py`) runs the reservation and
+commit path and kills itself with `SIGKILL` at a chosen step: before the
+reservation, after it, after the commit, or after the answer has been written to
+the client's log. A fresh process then replays the log and continues. Six kills
+are spread over a 600-request trace, followed by an uninterrupted run.
+
+Two arms run the identical schedule:
+
+* `durable` uses `DurableLedger` (`privfuse/ledger/durable.py`), which appends
+  every transition to a log, `fsync`s it, and replays it on open. A partial
+  trailing line from a kill mid-write is truncated, because a record that was
+  never fully written was also never acknowledged.
+* `volatile` keeps the ledger in memory, which is what the system did before
+  this experiment.
+
+Both arms are scored on the client side - the answers the tenant actually holds -
+because that is the information that left the building and it does not depend on
+what the ledger believes about itself.
+
+| arm | answers | uncharged | worst client eps | subjects over cap |
+|---|---|---|---|---|
+| durable | 389 | 0 | 0.191 (cap 0.2) | 0 of 10 |
+| volatile | 571 | - | 0.418 (2.1x cap) | 5 of 10 |
+
+The volatile arm is the failure mode: every restart resets the budget, so the
+hottest subject is served 2.1 times its cap. The durable arm pays for its
+correctness in availability (389 against 571 answers at the same cap) and in
+latency: `e21_cost.csv` measures 76 us per reserve-and-commit against 7.5 us in
+memory, because each transition is an fsync. Group commit would amortise that and
+is not implemented.
+
 ## Reading the numbers
 
 * Violation counts are the load-bearing result; wall-clock numbers are

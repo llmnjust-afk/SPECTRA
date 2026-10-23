@@ -199,6 +199,7 @@ python3 -m privfuse.experiments.e17_latency            # latency breakdown and l
 python3 -m privfuse.experiments.e18_adaptive_attack    # closed-loop attacker
 python3 -m privfuse.experiments.e19_faults             # crash injection at each settlement step
 python3 -m privfuse.experiments.e20_equiv              # exact table behind the same stack
+python3 -m privfuse.experiments.e21_restart            # SIGKILL the coordinator and replay the log
 python3 -m privfuse.cli run e4 --figures         # one experiment
 python3 -m privfuse.cli figures                  # rebuild figures only
 ```
