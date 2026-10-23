@@ -238,3 +238,93 @@ exact blocking 从 1.69 抬到 1.76——因为更小的请求更便宜，能从
 一个单协调器原型、无共识、无副本，E13 恰恰量化了这一上限；(ii) 评估以
 合成人群为主，缺少真实 trace 与与已发表系统的端到端对比。这两点无法靠
 改写解决，只能靠新的实现与测量，已在限制一节如实交代。
+
+## F. 模拟审稿意见的处理（第四轮）
+
+外部模拟审稿（Weak Reject, 2/5）逐条核对后的处理，按"论文缺陷 / 审稿人误解"分类。
+
+### F1. 已修正的论文缺陷（措辞与形式化，未改实验）
+
+1. **标量上限 vs 向量成本（P0-2，成立）。** `model.tex` 原来写
+   `spend + cost ⪯ E_s componentwise`，逐分量比较确实允许 1.9ε 通过 1.0ε 上限；
+   `analysis.tex` 的 Proposition 2 与证明同样写法。实现一直是对的
+   （`cost.py:102` 先转成 `ε_pure + ρ + 2√(ρ ln 1/δ)` 再与剩余额度比较标量），
+   所以这是"定义与实现不一致"。现在成本模型定义标量映射
+   `g(c)=ε_pure+ρ+2√(ρln(1/δ))`，两处命题与证明全部改为 `g(·) ≤ E_s`。
+2. **intro 的 42/2.43（P1-9b，成立）。** E4 数据：k=42 时 audit-only 为 2.016，
+   2.427 出现在 k=60；exact blocking 自 k=42 起为 1.694。原句把 k=42 与 k=60
+   的数拼在一起。改为 "across 60 accounts"。
+3. **效用实验的度量写错（P1-6，比审稿人指出的更严重）。** 原文称 "measures
+   the F1 of each answer"，但 `e11_utility.py` 实际是 breast-cancer 上的
+   高斯朴素贝叶斯下游**分类准确率**（CSV 列为 `accuracy`）。已按实现改写，
+   并去掉"counting queries over one predicate"的错误描述。
+4. **RDP 结论过宽（P1-3，成立）。** α_max=512 的网格确实无法标定 ε=0.02
+   （下限 0.0225），但扩到 α≈1200 即可。原文"zCDP is the only backend"改为
+   限定说法：zCDP 的优势是闭式可逆、无阶数下限，而非 RDP 原理上不能标定；
+   `background.tex` 的"cannot calibrate at all"同步限定为"on a grid capped at 512"。
+5. **intro 的 "microseconds"（P1-5，成立）。** 实测 p50 74 µs、p99 5.6 ms，
+   原句读起来像整条路径都在微秒级。改为 "tens of microseconds at the median,
+   with a millisecond tail"，§II-B 的 "latency budget of microseconds" 同步修正。
+6. **熔断器状态机（P1-8，成立）。** 原来只有定性描述。现在给出实际阈值：
+   压力落在 [0.60,0.85)、[0.85,1)、[1,∞) 分别进入 throttle/reject/freeze，
+   升级立即、降级需连续 d=3 次低于当前带阈值减 h=0.05。
+7. **SLO 监控口径（P0-3，基本成立）。** 原句称热表外的主体"cannot be the
+   subject whose spend violates"，这不成立（只是不在最暴露的 H 个之内）。
+   改为"最可能违约的是热表持有的主体"，并明确报告的是监控集比例而非总体比例。
+8. **基线的键写错（P1-9a 的真正根源）。** 论文三处把 static quota / exact
+   blocking 描述成 per-tenant，而 `policies.py` 实际按 (platform, subject)
+   记账（类注释也这么写）。因此"单平台时退化为 per-subject"的结论成立，
+   但理由不是租户合并，而是平台键在单平台时就是全局键。四处措辞统一为
+   per-platform；审稿人举的"同一 subject 被多个 tenant 查询"的反例不适用。
+9. **token bucket 的解释错误。** 它其实有 subject 键（(platform, subject)），
+   但以 0.05 ε/s 回填，一小时 trace 内回填 180ε，远超 0.3ε 的分片预算，
+   所以从不触发、曲线与 audit-only 完全重合。原文"neither has a subject key"
+   改为上述机制说明。
+10. **支持集假设（P0-6，部分成立）。** 现在明确：supp(q) 来自谓词与平台记录
+    索引，不来自私有值，因此拒绝只泄露"预算已用尽"。
+11. **不可信的持久性表述（P0-1 的措辞部分）。** 摘要把"crash-restart attacks"
+    与"exactly-once"说满了，而账本后端是内存实现、Fabric 适配器是 stub。
+    摘要改为"charges each admitted query once even when clients retry or a
+    platform dies mid-query"；Proposition 3 增加前提"assuming the ledger
+    outlives the coordinator process"；§VI 增加一句"Coordinator durability is
+    the backend's, not the protocol's"。**实现层面未做 WAL/重启测试**。
+12. **内存数字的口径。** 4.77 MB（E7，默认窗口）与 5.05 MB（E16，600 s 窗口）
+    是两个配置；E16 的对比现在写成"in the same 600 s configuration"，并把
+    5.0 改为实测 5.05。
+13. **稠密窗口账本的措辞（P1-10）。** 8,640×10⁶ 是"每个 (subject, epoch) 都
+    物化"的最坏情形；现在显式写明这一点，并指出稀疏实现按事件计费（E16）。
+
+### F2. 新增实验 E20：等功能的 exact 控制组（回应 P0-4）
+
+原 exact 基线同时缺少窗口、熔断与协调器，无法把差异归因于"近似"。E20 在
+`build_privfuse(..., PrivFuseConfig(exact=True))` 下把 Count-Min 换成稠密表
+（`privfuse/sketch/exact.py`），accountant ring、SLO、熔断、准入控制器与两阶段
+协调器完全相同。
+
+结果（1500 主体、12k 请求、cap 1.0/0.5、3 seeds）：
+
+| 指标 | PrivFuse | exact（同栈） |
+|---|---|---|
+| availability | 0.8139 | 0.8139（逐 seed 完全相同） |
+| windowed peak | 0.5057 | 0.5057（完全相同） |
+| hard-cap violations | 0 | 0 |
+| µs/request | 233 | 156（1.3–2.4×） |
+| bytes | 5.01 MB | 0.37 MB |
+
+结论对本文不利但诚实：在 10³ 主体规模上，sketch 只买到"斜率"——稠密表每主体
+约 246 B，10⁶ 主体即 246 MB。论文据此把主张改写为"定位交叉点"，而不是
+"近似免费"。README、docs/experiments.md 与 §VII-F 均已记录。
+
+### F3. 审稿人判断有误或过头的地方（未按其意见修改）
+
+- P1-9a 的反例不成立：基线不是 per-tenant 键（见 F1.8）。结论对、论证错。
+- P0-6 说协议"会泄露成员关系"过头：只要 supp 由元数据决定就不泄露；已补假设。
+- P0-3 的 H=1 是示意；默认 H=1024。但覆盖率问题在 N=10⁶ 时确实存在，已改口径。
+- P0-2 说"hard cap 语义无法验证"不准确：实现比较的是标量，问题在论文定义。
+
+### F4. 仍未解决（需要新的系统工作，非改写可及）
+
+1. **WAL / 进程重启**：E19 是进程内异常注入，不是真正的 kill -9 后重放。
+2. **多进程/多节点**：仍是单进程 2 vCPU；Fabric 适配器是 stub。
+3. **等功能的 exact 对比只在 1500 主体**：10⁶ 处是外推，不是测量。
+4. **私有账本元数据**：仍未解决，只在讨论中列为最重要开放问题。
