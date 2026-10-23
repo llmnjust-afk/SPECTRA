@@ -42,7 +42,7 @@ re-admission.
 The monitor, not the estimator, limits what the SLO means (E25). At 24 checkpoints of
 a 600\,s trace at cap 0.5 we recompute the exact windowed composition of every subject
 and compare it with the rate the hot table reports. In the heavy-tailed population the
-table's recall is 1.0 for $H\ge64$ and 0.95 at $H{=}8$, and the monitored rate matches
+table's recall is 1.0 for $H\ge64$ and 0.66--0.95 at $H{=}8$, and the monitored rate matches
 the population rate to three decimals. Flatten the popularity
 (Zipf 0.6) and shrink the table to eight slots and recall collapses to 0.014: 70 of 71
 violations are missed, and the monitored rate reads 0.000 against a population rate of
