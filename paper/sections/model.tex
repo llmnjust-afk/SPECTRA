@@ -97,11 +97,10 @@ service.
 
 To compare mechanisms under splitting we report the \emph{escape ratio}
 \begin{equation}
-R=\max_{s\in\mathcal{S}}\;\spend_s(\infty)/E_s ,
+R=\max_{s\in\mathcal{S}}\;\spend_s(T)/E_s ,
 \label{eq:escape}
 \end{equation}
-the worst-case ratio of the loss a subject actually incurred to the cap the
-subject declared. $R\le1$ certifies soundness on the trace; $R>1$ quantifies the
+where $T$ is the trace length and $\spend_s(T)$ the total charged to $s$ over
+it: the worst-case ratio of the loss a subject incurred to the cap it declared. $R\le1$ certifies soundness on the trace; $R>1$ quantifies the
 leak. The ratio folds the effect of splitting, of per-account keying and of the
-composition rule into one quantity that is comparable across mechanisms, and it
-is the quantity a regulator would ask for after the fact.
+composition rule into one quantity comparable across mechanisms.
