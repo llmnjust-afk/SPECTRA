@@ -129,9 +129,42 @@ def fig_hysteresis() -> pathlib.Path | None:
     return _save(fig, "fig6_hysteresis")
 
 
+def fig_e8() -> pathlib.Path | None:
+    frame = _load("e8_scale")
+    if frame is None:
+        return None
+    fig, ax = plt.subplots(1, 2, figsize=(8, 3))
+    exact = frame[frame["backend"] == "exact"]
+    ax[0].plot(exact["subjects"], exact["bytes"] / 1e6, marker="o", label="exact")
+    for width, group in frame[frame["backend"] == "sketch"].groupby("width"):
+        ax[0].plot(
+            group["subjects"],
+            group["bytes"] / 1e6,
+            marker="s",
+            linestyle="--",
+            label=f"sketch w={width}",
+        )
+    ax[0].set_xscale("log")
+    ax[0].set_yscale("log")
+    ax[0].set_xlabel("subjects")
+    ax[0].set_ylabel("peak memory (MB)")
+    ax[0].legend(fontsize=7)
+    ax[0].set_title("state size")
+
+    for width, group in frame[frame["backend"] == "sketch"].groupby("width"):
+        ax[1].plot(group["subjects"], group["us_per_request"], marker="s", label=f"w={width}")
+    ax[1].plot(exact["subjects"], exact["us_per_request"], marker="o", label="exact")
+    ax[1].set_xscale("log")
+    ax[1].set_xlabel("subjects")
+    ax[1].set_ylabel("us / request")
+    ax[1].legend(fontsize=7)
+    ax[1].set_title("per-request cost")
+    return _save(fig, "fig7_scale")
+
+
 def build_all() -> list[pathlib.Path]:
     produced = []
-    for builder in (fig_e1, fig_e2, fig_e4, fig_e5, fig_e7, fig_hysteresis):
+    for builder in (fig_e1, fig_e2, fig_e4, fig_e5, fig_e7, fig_hysteresis, fig_e8):
         path = builder()
         if path is not None:
             produced.append(path)

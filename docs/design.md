@@ -41,12 +41,21 @@ maintains two estimators, both over Count-Min sketches:
 * `Ehat_d^cum` — cumulative, never reset, backs the hard cap;
 * `Ehat_d^win` — sum over the epoch ring, backs the windowed SLO.
 
+The ring must cover the window. A window of length `w` touches
+`ceil(w / epoch) + 1` epochs, so a ring of `k` epochs only guarantees coverage of
+`(k - 1) * epoch`; `OnlineAccountantConfig.max_window` reports that smaller
+number, and the factory sizes the ring with `ring_epochs_for` instead of trusting
+the configured value. Without this, a 600 s window over 300 s epochs silently
+drops the oldest epoch and the windowed estimate under-counts — the one failure
+direction the design forbids.
+
 Sketches are additive and their updates are non-negative, so
 
-> **P1 (one-sidedness).** For every subject and every time, `Ehat_d >= E_d`.
+> **P1 (one-sidedness).** For every subject, every view (cumulative or any fully
+> covered window), and every time, `Ehat_d >= E_d`.
 
-The proof is the standard Count-Min argument plus the observation that the
-conversion `rho -> eps` is monotone. The update rule in
+The proof is the standard Count-Min argument, the ring-coverage invariant above,
+and the observation that the conversion `rho -> eps` is monotone. The update rule in
 `CountMinSketch.add` raises every cell below `min + value` to `min + value`.
 The textbook conservative update only raises cells *equal* to the minimum, which
 is equivalent for unit increments but can leave a collision cell just below the
@@ -127,5 +136,9 @@ exact dictionary is smaller. What it buys is:
 3. **A conservative failure direction.** Every error makes the breaker trip
    earlier, never later.
 
-The price is the 5x per-request overhead measured in E2 and the availability loss
-in E3 — both of which are reported rather than hidden.
+The hot table is bounded, so a subject that is evicted and returns cannot recover
+its history from the table. It is seeded instead with the sketch's upper bound
+for the past and then accumulates exactly, which keeps the value an upper bound
+while staying exact for subjects tracked from their first request. The price is
+the 5x per-request overhead measured in E2 and the availability loss in E3 —
+both of which are reported rather than hidden.

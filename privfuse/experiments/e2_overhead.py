@@ -5,7 +5,11 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from privfuse.accounting.online import OnlineAccountant, OnlineAccountantConfig
+from privfuse.accounting.online import (
+    OnlineAccountant,
+    OnlineAccountantConfig,
+    ring_epochs_for,
+)
 from privfuse.dp.accountant import ExactAccountant
 from privfuse.dp.mechanisms import gaussian_cost
 from privfuse.experiments.common import write_csv, write_json
@@ -15,7 +19,14 @@ COST = gaussian_cost(0.02, EPS_DELTA, 1.0)
 
 
 def _bench_online(width: int, n_subjects: int, n_ops: int = 20000) -> tuple[float, float, int]:
-    accountant = OnlineAccountant(OnlineAccountantConfig(width=width, depth=4))
+    accountant = OnlineAccountant(
+        OnlineAccountantConfig(
+            width=width,
+            depth=4,
+            epoch_seconds=300.0,
+            ring_size=ring_epochs_for(600.0, 300.0),
+        )
+    )
     start = time.perf_counter()
     for i in range(n_ops):
         subject = f"s{i % n_subjects:06d}"

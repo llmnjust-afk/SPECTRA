@@ -8,6 +8,9 @@ EXPERIMENTS = {
     "e5": "privfuse.experiments.e5_slo",
     "e6": "privfuse.experiments.e6_settlement",
     "e7": "privfuse.experiments.e7_ablation",
+    "e8": "privfuse.experiments.e8_scale",
 }
 
-__all__ = ["EXPERIMENTS"]
+DEFAULT = [name for name in EXPERIMENTS if name != "e8"]
+
+__all__ = ["DEFAULT", "EXPERIMENTS"]

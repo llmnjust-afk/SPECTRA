@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from privfuse.accounting.online import OnlineAccountant, OnlineAccountantConfig
+from privfuse.accounting.online import (
+    OnlineAccountant,
+    OnlineAccountantConfig,
+    ring_epochs_for,
+)
 from privfuse.control.admission import AdmissionConfig, AdmissionController
 from privfuse.control.breaker import BreakerConfig, BreakerController
 from privfuse.ledger.ledger import Coordinator
@@ -48,13 +52,16 @@ def build_privfuse(
         window=cfg.window,
         delta=delta,
     )
+    ring_size = cfg.ring_size
+    if cfg.window is not None:
+        ring_size = max(ring_size, ring_epochs_for(cfg.window, cfg.epoch_seconds))
     accountant = OnlineAccountant(
         OnlineAccountantConfig(
             width=cfg.width,
             depth=cfg.depth,
             hot_capacity=cfg.hot_capacity if cfg.use_hot else 1,
             epoch_seconds=cfg.epoch_seconds,
-            ring_size=cfg.ring_size,
+            ring_size=ring_size,
         )
     )
     coordinator = Coordinator(caps=trace.caps, ttl=cfg.ttl, delta=delta)

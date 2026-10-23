@@ -5,12 +5,12 @@ from __future__ import annotations
 import importlib
 import time
 
-from privfuse.experiments import EXPERIMENTS
+from privfuse.experiments import DEFAULT, EXPERIMENTS
 from privfuse.experiments import figures
 
 
 def main(names: list[str] | None = None) -> None:
-    selected = names or list(EXPERIMENTS)
+    selected = names or list(DEFAULT)
     for name in selected:
         module = importlib.import_module(EXPERIMENTS[name])
         started = time.perf_counter()

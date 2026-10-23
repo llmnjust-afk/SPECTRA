@@ -1,0 +1,14 @@
+{
+  "hot_requests": 8,
+  "hot_subjects": 1,
+  "populations": [
+    1000,
+    10000,
+    100000,
+    1000000
+  ],
+  "widths": [
+    4096,
+    16384
+  ]
+}

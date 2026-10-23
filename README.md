@@ -26,13 +26,13 @@ suite behind the paper. Everything runs on CPU; no GPU is required.
 | Hysteresis circuit breaker | implemented, tested |
 | Two-phase settlement ledger + cross-platform coordinator | implemented, tested |
 | Market simulator and baselines | implemented, tested |
-| Experiments E1–E7 + figures | implemented, reproducible |
+| Experiments E1–E8 + figures | implemented, reproducible |
 | Hyperledger Fabric chaincode | interface defined, not implemented |
 | TEE execution layer | interface defined, not implemented |
 | zkSNARK compliance proofs | interface defined, not implemented |
 
-32 unit and property tests pass. The full experiment suite runs in about
-70 seconds on two cores.
+36 unit and property tests pass. The core suite runs in about 65 seconds on two cores; the scale
+sweep to one million subjects (E8) takes another 90 seconds.
 
 ## Quickstart
 
@@ -41,6 +41,7 @@ python3 -m pip install -r requirements.txt
 python3 -m pytest -q
 python3 -m privfuse.cli demo --requests 2000
 python3 -m privfuse.experiments.run_all
+python3 -m privfuse.experiments.e8_scale     # the long sweep, ~90 s
 ```
 
 `run_all` writes `results/*.csv`, `results/*.json` and `results/figures/*.png`.
@@ -90,6 +91,8 @@ the vacuous 2.0 of basic composition.
 **Cross-platform budget splitting (E4).** Twelve subjects are attacked through
 42 small requests spread over three platforms. Platform-local policies admit all
 of them and reach 2.01x the cap; PrivFuse rejects the excess and stays at 0.81x.
+Every baseline violates on twelve of twelve attacked subjects; PrivFuse violates
+on none, at every split count tested.
 
 | policy | realised ε / cap (42 splits) | violating subjects |
 |---|---|---|
@@ -100,19 +103,31 @@ of them and reach 2.01x the cap; PrivFuse rejects the excess and stays at 0.81x.
 | **PrivFuse** | **0.81** | **0** |
 | exact global | 0.97 | 0 |
 
-**Accounting accuracy (E1).** Zero false negatives at every sketch width. The
-top 1% of subjects — the only ones that can reach the cap — are accounted
-exactly whenever the hot table tracks them, so their relative error is 0 even at
-width 512. Mean absolute error over all subjects falls from 0.078 (7.8% of the
-cap) at width 512 to below 1e-4 at width 32768.
+**Accounting accuracy (E1).** Zero false negatives at every sketch width and
+every hot-table size. The top 1 percent of subjects — the only ones that can
+reach the cap — are off by 0.13% of the cap with the hot table, against 0.76% to
+8.1% without it. Mean absolute error over all subjects falls from 0.073 (7.3% of
+the cap) at width 512 to below 1e-4 at width 32768.
 
-**Overhead (E2).** 23 µs per request at width 16384, against 4.7 µs for an exact
-dictionary, in pure Python. The cost is `O(depth)` hashes and does not grow with
-the subject population.
+**Overhead (E2).** 27 µs per request at width 16384 against 4.8 µs for an exact
+dictionary, in pure Python, with 5.6 MB of state for 5,000 subjects.
 
-**Price of soundness (E3).** At a cap of 1.0 PrivFuse keeps 94% availability
-while local policies keep 98% and violate; at a cap of 3.0, where the attack no
-longer binds, all policies reach 100% availability and zero violations.
+**Scale (E8).** The point of a sketch is that its state stops growing. Sweeping
+the population from one thousand to one million subjects, the exact accountant
+grows from 1.1 MB to 265 MB while the sketch stays at 4.7 MB (width 4096) or
+6.3 MB (width 16384). The crossover is around ten thousand subjects; below it,
+an exact dictionary is smaller and there is no reason to sketch. Absolute error
+stays bounded at about 0.06 in ε across four orders of magnitude, and no subject
+is ever under-estimated.
+
+**Price of soundness (E3).** At a cap of 1.0 PrivFuse keeps 94.2% availability
+while local policies keep 97.0% and 97.7% and violate the cap 63 times over the sweep.
+The two to three points of availability are what soundness costs; a policy that never
+rejects will always look better on that axis.
+
+**SLO frontier (E5).** Raising the soft budget from 0.55 to 0.95 of the cap
+moves availability from 82.9% to 88.5% and the soft-violation rate from 1.9% to
+zero, with no hard-cap violation at any point.
 
 **Hysteresis (E7).** Under pressure oscillating between 0.59 and 0.67, a breaker
 without hysteresis changes level 26 times in 600 evaluations; with a 0.05 margin
@@ -139,7 +154,8 @@ the accountant never under-estimates, so the cap is never silently exceeded.
 ## Reproducing the paper numbers
 
 ```bash
-python3 -m privfuse.experiments.run_all          # everything
+python3 -m privfuse.experiments.run_all          # core suite
+python3 -m privfuse.experiments.e8_scale         # scale sweep
 python3 -m privfuse.cli run e4 --figures         # one experiment
 python3 -m privfuse.cli figures                  # rebuild figures only
 ```

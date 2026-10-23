@@ -12,6 +12,7 @@ All experiments are deterministic given their seeds. Results land in
 | E5 | What is the availability / SLO-violation frontier? | `e5_slo` |
 | E6 | Does settlement survive crashes and retries? | `e6_settlement` |
 | E7 | Which component contributes what? | `e7_ablation` |
+| E8 | Does the state stay bounded as the population grows? | `e8_scale` |
 
 ## Common setup
 
@@ -71,6 +72,18 @@ Variants: full system, no hot table, no hysteresis, no degradation, narrow
 sketch, wide sketch, and exact global accounting. Report availability, utility,
 violations, degraded fraction, memory, and microseconds per request. A separate
 micro-benchmark drives the breaker with a sinusoid to isolate hysteresis.
+
+## E8 — scale
+
+Sweep the subject population over 10^3, 10^4, 10^5 and 10^6 while holding the
+traffic shape fixed: one thousand heavy subjects with eight requests each, and
+every other subject exactly once. Truth is known in closed form, so no second
+accountant occupies memory during the measurement. Memory is the peak traced by
+`tracemalloc`, not an estimate. Report peak bytes, microseconds per request,
+under-estimates (must be zero), and absolute error.
+
+E8 is excluded from `run_all` because the million-subject point takes about a
+minute by itself; run it with `make scale`.
 
 ## Reading the numbers
 

@@ -33,7 +33,22 @@ class OnlineAccountantConfig:
 
     @property
     def max_window(self) -> float:
-        return self.epoch_seconds * self.ring_size
+        """Longest window that is fully covered by the retained ring.
+
+        A window of length ``w`` touches ``ceil(w / epoch) + 1`` epochs, so a
+        ring of ``k`` epochs only guarantees coverage of ``(k - 1) * epoch``.
+        Reporting ``k * epoch`` would let a caller ask for a window whose oldest
+        epoch has already been evicted, and the windowed estimate would then
+        under-count -- the one failure the accountant must not have.
+        """
+        return self.epoch_seconds * max(0, self.ring_size - 1)
+
+
+def ring_epochs_for(window: float, epoch_seconds: float) -> int:
+    """Smallest ring that covers ``window`` without dropping an epoch."""
+    if window <= 0:
+        return 1
+    return int(math.ceil(window / epoch_seconds)) + 1
 
 
 @dataclass

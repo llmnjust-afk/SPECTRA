@@ -15,6 +15,11 @@ class HotTable:
     exact composed cost, so a tracked subject never suffers sketch error.  The
     table is an optimisation for accuracy, not for safety: evicted subjects fall
     back to the (still conservative) Count-Min estimate.
+
+    A subject that is re-admitted after eviction cannot recover its true history
+    from this table, so the caller seeds the counter with the sketch's upper
+    bound for the past.  The counter therefore stays an upper bound at all
+    times while remaining exact for subjects tracked from their first request.
     """
 
     def __init__(self, capacity: int = 1024) -> None:
@@ -23,26 +28,23 @@ class HotTable:
         self.capacity = int(capacity)
         self._summary = SpaceSaving(capacity=capacity)
         self._costs: dict[str, CostVector] = {}
-        self._evicted: set[str] = set()
-        self.sealed = False
 
-    def add(self, subject: str, cost: CostVector) -> None:
-        if self.sealed:
-            return
+    def contains(self, subject: str) -> bool:
+        return subject in self._costs
+
+    def add(
+        self, subject: str, cost: CostVector, seed: CostVector | None = None
+    ) -> None:
+        was_tracked = subject in self._costs
         evicted = self._summary.add(subject, max(cost.eps(1e-5), 1e-12))
         if evicted is not None:
             self._costs.pop(evicted, None)
-            self._evicted.add(evicted)
-            if len(self._evicted) > 8 * self.capacity:
-                self.sealed = True
-                self._costs.clear()
-                return
         if not self._summary.contains(subject):
             return
-        if subject in self._evicted:
+        if was_tracked:
+            self._costs[subject] = self._costs[subject] + cost
             return
-        current = self._costs.get(subject, CostVector.zero())
-        self._costs[subject] = current + cost
+        self._costs[subject] = (seed or CostVector.zero()) + cost
 
     def estimate(self, subject: str) -> CostVector | None:
         return self._costs.get(subject)
@@ -81,11 +83,18 @@ class CostSketch:
     def add(self, subject: str, cost: CostVector) -> None:
         if cost.is_zero():
             return
+        seed = None
+        if not self.hot.contains(subject):
+            seed = CostVector(
+                eps_pure=self._pure.estimate(subject),
+                rho=self._rho.estimate(subject),
+                delta=0.0,
+            )
         if cost.eps_pure:
             self._pure.add(subject, cost.eps_pure)
         if cost.rho:
             self._rho.add(subject, cost.rho)
-        self.hot.add(subject, cost)
+        self.hot.add(subject, cost, seed=seed)
         self.events += 1
 
     def estimate(self, subject: str) -> CostVector:

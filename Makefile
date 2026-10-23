@@ -1,4 +1,4 @@
-.PHONY: install test run figures demo clean
+.PHONY: install test run scale figures demo clean
 
 install:
 	python3 -m pip install -r requirements.txt
@@ -8,6 +8,9 @@ test:
 
 run:
 	python3 -m privfuse.experiments.run_all
+
+scale:
+	python3 -m privfuse.experiments.e8_scale
 
 figures:
 	python3 -m privfuse.cli figures

@@ -80,3 +80,17 @@ def test_costsketch_upper_bound_contains_estimate():
 
 
 import pytest
+
+
+def test_readmitted_subject_stays_one_sided():
+    from privfuse.dp.mechanisms import gaussian_cost
+
+    cost = gaussian_cost(0.02, 1e-5, 1.0)
+    sketch = CostSketch(width=64, depth=3, hot_capacity=2)
+    truth = CostVector.zero()
+    for i in range(20):
+        sketch.add(f"s{i}", cost)
+    for _ in range(5):
+        sketch.add("s0", cost)
+        truth = truth + cost
+    assert sketch.estimate("s0").eps(1e-5) >= truth.eps(1e-5) - 1e-12
