@@ -325,6 +325,42 @@ def fig_e17() -> pathlib.Path | None:
     return _save(fig, "fig17_latency")
 
 
+
+def fig_e11() -> pathlib.Path | None:
+    slo = _load("e5_slo")
+    churn = _load("e14_churn")
+    if slo is None or churn is None:
+        return None
+    fig, ax = plt.subplots(1, 2, figsize=(7.0, 2.2))
+    # (a) the soft target costs availability; the default p=1% fails below 0.85
+    grid = slo.groupby("soft_ratio")[["availability", "observed_soft_violation_rate", "slo_satisfied"]].mean()
+    ax[0].plot(grid.index, grid["availability"], marker="o", color="C0", label="availability")
+    for ratio, row in grid.iterrows():
+        rate = 100 * row["observed_soft_violation_rate"]
+        ax[0].annotate(f"{rate:.2g}%", (ratio, row["availability"]), textcoords="offset points",
+                       xytext=(0, 7), ha="center", fontsize=5.5)
+    ax[0].axvline(0.85, color="0.6", linestyle=":", linewidth=0.7)
+    ax[0].set_xlabel("soft ratio $\\alpha$")
+    ax[0].set_ylabel("availability")
+    ax[0].set_ylim(0.74, 0.80)
+    ax[0].set_title("(a) soft target, labels are the observed violation rate", fontsize=6.5)
+    # (b) churn: the hot table stops paying for itself
+    width = 0.36
+    positions = {0: 0, 100: 1, 400: 2}
+    for i, cap in enumerate(sorted(churn["cap"].unique())):
+        block = churn[churn["cap"] == cap].groupby("cohort")[["over_mean", "over_p99"]].mean()
+        xs = [positions[c] + (i - 0.5) * width for c in block.index]
+        ax[1].bar(xs, block["over_mean"].to_numpy(), width=width, label=f"cap {cap}$\\epsilon$")
+        for x, value in zip(xs, block["over_mean"].to_numpy()):
+            ax[1].text(x, value + 0.02, f"{value:.2f}", ha="center", fontsize=5.5)
+    ax[1].set_xticks([0, 1, 2])
+    ax[1].set_xticklabels(["no churn", "100 / epoch", "400 / epoch"])
+    ax[1].set_ylabel("mean over-estimate ($\\epsilon$)")
+    ax[1].legend(frameon=False, fontsize=5.5)
+    ax[1].set_title("(b) churn ($p_{99}$: 1.7, 2.5, 5.1$\\times$)", fontsize=6.5)
+    return _save(fig, "fig11_slo_churn")
+
+
 def build_all() -> list[pathlib.Path]:
     produced = []
     for builder in (
@@ -340,6 +376,7 @@ def build_all() -> list[pathlib.Path]:
         fig_e11,
         fig_e12,
         fig_e17,
+        fig_e11,
     ):
         path = builder()
         if path is not None:
