@@ -33,33 +33,55 @@ estimator, so a failed execution costs the subject nothing.
 \centering
 \begin{tikzpicture}[
   font=\footnotesize,
-  base/.style={draw, rounded corners=2pt, align=center, minimum height=9mm,
-               inner sep=3pt, fill=white},
-  ctl/.style={base, fill=blue!6},
-  st/.style={base, fill=orange!12},
-  ar/.style={-{Latex[length=1.5mm]}, thick},
-  lab/.style={font=\scriptsize, inner sep=1.5pt, fill=white},
+  ink/.style={draw=inkc},
+  box/.style={draw=inkc!70, line width=0.5pt, rounded corners=2pt, align=center,
+              minimum height=1.0cm, inner sep=3pt, fill=white},
+  ctl/.style={box, fill=ctlfill, draw=ctledge},
+  st/.style={box, fill=stfill, draw=stedge},
+  ar/.style={-{Latex[length=1.3mm,width=1.0mm]}, line width=0.6pt, draw=inkc,
+             rounded corners=3pt},
+  acct/.style={-{Latex[length=1.2mm,width=0.9mm]}, line width=0.55pt, draw=inkc,
+               dashed, dash pattern=on 2.4pt off 1.8pt, rounded corners=3pt},
+  lab/.style={font=\scriptsize, inner sep=1.5pt, fill=white, text=inkc},
+  sub/.style={font=\scriptsize, text=inkc!70},
 ]
-\node[base, text width=1.8cm] (ten)   at (0.0,0)  {Tenant\\account};
-\node[ctl,  text width=1.8cm] (price) at (2.9,0)  {Price\\$q\mapsto\cost$};
-\node[ctl,  text width=2.5cm] (brk)   at (6.1,0)  {Breaker\\normal / throttle / reject};
-\node[ctl,  text width=2.0cm] (coord) at (9.3,0)  {Coordinator\\reserve};
-\node[base, text width=2.0cm] (exec)  at (12.1,0) {Execute\\noisy answer};
-\node[st, text width=5.2cm] (acc) at (3.6,-2.3)
-      {\textbf{Estimator} (one-sided)\\cumulative sketch $\cdot$ epoch ring $\cdot$ hot table};
-\node[st, text width=5.0cm] (led) at (10.2,-2.3)
-      {\textbf{Settlement ledger} (exact)\\committed $+$ in-flight $\eps$ per subject};
+\definecolor{inkc}{RGB}{26,26,26}
+\definecolor{ctlfill}{RGB}{237,242,248}
+\definecolor{ctledge}{RGB}{74,111,165}
+\definecolor{stfill}{RGB}{251,241,230}
+\definecolor{stedge}{RGB}{176,122,69}
 
-\draw[ar] (ten) -- node[lab,above]{$q$} (price);
-\draw[ar] (price) -- node[lab,above]{$\cost$} (brk);
-\draw[ar] (brk) -- node[lab,above]{mode} (coord);
-\draw[ar] (coord) -- node[lab,above]{ok} (exec);
-\draw[ar] (exec.north) -- (12.1,0.95) -- (0.0,0.95) -- (ten.north);
-\node[lab] at (6.1,0.95) {answer};
-\draw[ar] (exec.east) -- (13.6,-1.6) -- (13.6,-3.3) -- (3.6,-3.3) -- (acc.south);
-\node[lab] at (8.4,-3.3) {observe};
-\draw[ar, dashed] (coord.south) -- node[lab,left,pos=0.35]{reserve,\ commit} (led.north);
-\draw[ar, dashed] (acc.north) -- node[lab,above right]{$\hat{\eps}$, rate} (brk.south);
+% request path, one row of five stages at fixed x so every gap is the same
+\node[box, text width=2.4cm] (ten)   at (0.0,0)    {\textbf{Tenant account}};
+\node[ctl, text width=2.0cm] (price) at (3.4,0)    {\textbf{Price}\\[1pt]{\sub $q\mapsto\cost$}};
+\node[ctl, text width=3.2cm] (brk)   at (7.4,0)    {\textbf{Breaker}\\[1pt]{\sub normal / throttle / reject}};
+\node[ctl, text width=2.0cm] (coord) at (11.4,0)   {\textbf{Coordinator}\\[1pt]{\sub reserve}};
+\node[box, text width=2.0cm] (exec)  at (14.8,0)   {\textbf{Execute}\\[1pt]{\sub noisy answer}};
+
+\draw[ar] (ten)   -- node[lab, above=1pt] {$q$}    (price);
+\draw[ar] (price) -- node[lab, above=1pt] {$\cost$} (brk);
+\draw[ar] (brk)   -- node[lab, above=1pt] {mode}   (coord);
+\draw[ar] (coord) -- node[lab, above=1pt] {ok}     (exec);
+
+% answer returns above the row
+\draw[ar] (exec.north) -- (14.8,1.15) -- (0.0,1.15) -- (ten.north);
+\node[lab] at (7.4,1.15) {answer};
+
+% accounting state
+\node[st, text width=5.6cm] (acc) at (3.6,-2.6)
+      {\textbf{Estimator} (one-sided)\\[1pt]{\sub cumulative sketch $\cdot$ epoch ring $\cdot$ hot table}};
+\node[st, text width=5.0cm] (led) at (11.4,-2.6)
+      {\textbf{Settlement ledger} (exact)\\[1pt]{\sub committed $+$ in-flight $\eps$ per subject}};
+
+% reserve and commit, straight down into the ledger
+\draw[acct] (coord.south) -- node[lab, right=2pt, pos=0.45] {reserve, commit} (led.north);
+
+% pressure flows back up into the breaker, routed orthogonally
+\draw[acct] (acc.north) -- (3.6,-1.2) -- node[lab, above=1pt, pos=0.60] {$\hat{\eps}$, rate} (7.4,-1.2) -- (brk.south);
+
+% only a committed charge reaches the estimator
+\draw[ar] (exec.east) -- (16.6,0) -- (16.6,-3.7) -- (3.6,-3.7) -- (acc.south);
+\node[lab] at (10.1,-3.7) {observe};
 \end{tikzpicture}
 \caption{Request path. Solid arrows carry requests and answers, dashed arrows carry
 accounting state. The ledger enforces the cumulative cap exactly; the estimator
