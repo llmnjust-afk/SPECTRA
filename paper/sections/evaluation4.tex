@@ -61,8 +61,8 @@ The utility experiment puts a real dataset behind the cap: the UCI breast-cancer
 (569 records, 30 features), split 70/30 stratified into 398 training and 171 test
 records. Features are clipped to the public unit interval, so the L2 sensitivity of a
 mean vector is $\sqrt{30}/398=3.4\times10^{-3}$; each release is four Gaussian
-mechanisms at a quarter of the per-release zCDP cost, the variance is debiased by the
-released noise variance, and five seeds give the spread. At $\eps_q{=}1.0$ \sys\ admits one query at $0.87\pm0.06$; at
+mechanisms at a quarter of the per-release zCDP cost, second moments are debiased by
+subtracting the known noise variance, and five seeds give the spread. At $\eps_q{=}1.0$ \sys\ admits one query at $0.87\pm0.06$; at
 $0.5\eps$ three at $0.84\pm0.06$; at $0.25\eps$ fifteen at $0.60\pm0.22$. Cheaper releases do not buy accuracy: the admissible count grows as $1/\eps_q^2$, so
 the $\sqrt{n}$ averaging gain cancels the $1/\eps_q$ noise. The baselines answer 60 or
 100 queries at 0.92--0.93 while spending 2.0--12$\eps$, buying accuracy with a violation
