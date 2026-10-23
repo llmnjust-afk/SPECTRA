@@ -3,7 +3,7 @@
 
 Table~\ref{tab:enforce} reports the central comparison at six cap levels, each
 averaged over twelve seeds. At a cap of $\eps{=}1.0$, \sys\ admits 0.934 of requests
-and produces no hard-cap violation, while exact per-tenant blocking admits 0.978 and
+and produces no hard-cap violation, while exact per-platform blocking admits 0.978 and
 lets 12.7 subjects exceed the cap on average, the worst of them reaching $1.69\eps$.
 Static quota behaves similarly at 0.956 availability and the same violation count.
 The baselines' counters are exact; the violations are caused by the key. A subject
@@ -54,24 +54,24 @@ Twelve seeds bound the noise: the 95\% interval of \sys's availability, from
 Student's $t$ with eleven degrees of freedom, is at most $\pm0.008$, and the paired
 difference is tighter because every policy sees the same traces. At $1.0\eps$ \sys\ admits $4.4\pm0.2$ points fewer
 requests than exact blocking and $2.2\pm0.2$ fewer than static quota, while both
-baselines exceed the cap $12.7\pm0.3$ times per run against zero. Their accounting
-is deterministic, so the only quantity that varies across seeds is the violation
-count, and it varies by one subject. Zero violations is an observation over twelve
-traces, not a proof; the proof is Proposition~\ref{prop:safety}, and the experiment
-is what tells us the implementation realises it.
+baselines exceed the cap $12.7\pm0.3$ times per run against zero. Their accounting is
+deterministic, so only the violation count varies across seeds. Zero violations is an observation over twelve traces, not
+a proof; Proposition~\ref{prop:safety} is the proof, and the experiment shows the
+implementation realises it.
 
 Figure~\ref{fig:attack} turns to the adversary. Under a tenant that splits a
 fixed budget across $k$ identities, the escape ratio of audit-only and token-bucket
-policies rises linearly with $k$, from 1.07 at $k{=}12$ to 2.43 at $k{=}60$: neither
-has a subject key, so both price each fragment against a fresh allowance. Static
-quota saturates at 1.30, the ratio of tenants that can touch a subject; exact
-per-tenant blocking rises to 1.69 and flattens for the same reason.
+policies rises linearly with $k$, from 1.07 at $k{=}12$ to 2.43 at $k{=}60$: audit-only has no key
+at all, and the bucket refills $180\eps$ over the one-hour trace against a $0.3\eps$
+fragment, so it never binds. Static quota
+saturates at 1.30 and exact blocking rises to 1.69; neither grows with $k$ once the
+split exceeds what the per-platform counters can absorb.
 \sys\ is flat at 0.82 across the whole range, and exact global is flat at 0.98,
 because neither can be made to forget that the fragments concern the same
 subject. The flatness, not the level, is the result: the attack's only lever is
 the identity it uses, and identity is not part of the key.
 
-Exact global deserves scrutiny: it is the strongest baseline and it is sound. At
+Exact global is the strongest baseline and it is sound. At
 $k{=}42$ it admits 0.929 against 0.923 and leaves 2\% of the cap unused against 18\%. The 18\% is the residue of the soft threshold: \sys\ throttles
 from $0.8E$ and throttled queries consume half a charge, so the worst subject ends
 below its cap rather than at it. What exact global

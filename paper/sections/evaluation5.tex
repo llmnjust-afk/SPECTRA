@@ -1,10 +1,8 @@
 \subsection{Settlement and Concurrency}
 \label{sec:eval-concurrency}
 
-Five settlement invariants are checked directly and all pass: a repeated commit
-charges once, a timeout releases, a repeated reserve returns the same reservation and
-cannot be re-bound, a crash between reserve and commit leaves no double spend, and an
-expired reservation is recovered. In the atomicity test, 16 threads issue 3{,}200
+Five settlement invariants pass, including the refusal to re-bind a reserve;
+Table~\ref{tab:faults} reports the crash points. In the atomicity test, 16 threads issue 3{,}200
 attempts against a subject whose cap funds exactly 100 charges; every thread count from
 2 to 16 admits exactly 100, spends exactly $1.0\eps$, and records zero violations.
 

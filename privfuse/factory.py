@@ -35,6 +35,7 @@ class PrivFuseConfig:
     degrade_utility_loss: float = 0.3
     ttl: float = 30.0
     use_hot: bool = True
+    exact: bool = False
 
 
 def build_privfuse(
@@ -62,6 +63,7 @@ def build_privfuse(
             hot_capacity=cfg.hot_capacity if cfg.use_hot else 1,
             epoch_seconds=cfg.epoch_seconds,
             ring_size=ring_size,
+            exact=cfg.exact,
         )
     )
     coordinator = Coordinator(caps=trace.caps, ttl=cfg.ttl, delta=delta)

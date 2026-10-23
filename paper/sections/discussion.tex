@@ -31,7 +31,7 @@ hot table is measured in E14: it costs accuracy and availability, never soundnes
 
 Two conditions would falsify the approach. If a population is small and its policy
 cumulative, exact counting is cheaper, as our ablation shows at $1{,}500$ subjects;
-with one platform, per-tenant quotas are already sound. And if a query's cost cannot
+with one platform, a per-platform quota is already a per-subject quota and is sound. And if a query's cost cannot
 be predicted before execution, admission must price conservatively or fall back to
 post-hoc charging, weakening the guarantee to the one auditing provides. The design is
 for what remains: many subjects, several platforms, many tenants, and a promise that

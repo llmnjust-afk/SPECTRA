@@ -21,6 +21,7 @@ from typing import Iterator, Sequence
 
 from privfuse.dp.cost import CostVector
 from privfuse.sketch.costsketch import CostSketch
+from privfuse.sketch.exact import ExactCostSketch
 
 
 @dataclass
@@ -30,6 +31,7 @@ class OnlineAccountantConfig:
     hot_capacity: int = 1024
     epoch_seconds: float = 60.0
     ring_size: int = 8
+    exact: bool = False
 
     @property
     def max_window(self) -> float:
@@ -64,14 +66,19 @@ class OnlineAccountant:
     def __init__(self, config: OnlineAccountantConfig | None = None) -> None:
         self.config = config or OnlineAccountantConfig()
         cfg = self.config
-        self._cumulative = CostSketch(
+        self._cumulative = self._make_sketch(seed=11)
+        self._epochs: deque[Epoch] = deque()
+        self._next_index = 0
+
+    def _make_sketch(self, seed: int) -> CostSketch | ExactCostSketch:
+        cfg = self.config
+        factory = ExactCostSketch if cfg.exact else CostSketch
+        return factory(
             width=cfg.width,
             depth=cfg.depth,
             hot_capacity=cfg.hot_capacity,
-            seed=11,
+            seed=seed,
         )
-        self._epochs: deque[Epoch] = deque()
-        self._next_index = 0
 
     def _rotate(self, now: float) -> None:
         cfg = self.config
@@ -92,12 +99,7 @@ class OnlineAccountant:
         epoch = Epoch(
             index=self._next_index,
             start=start,
-            sketch=CostSketch(
-                width=cfg.width,
-                depth=cfg.depth,
-                hot_capacity=cfg.hot_capacity,
-                seed=1000 + self._next_index,
-            ),
+            sketch=self._make_sketch(seed=1000 + self._next_index),
         )
         self._next_index += 1
         return epoch

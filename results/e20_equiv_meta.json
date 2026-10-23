@@ -1,0 +1,19 @@
+{
+  "caps": [
+    1.0,
+    0.5
+  ],
+  "n_requests": 12000,
+  "n_subjects": 1500,
+  "note": "identical ring, breaker, admission controller and coordinator; only the accountant store differs",
+  "policies": [
+    "privfuse",
+    "privfuse_exact"
+  ],
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "window": 600.0
+}

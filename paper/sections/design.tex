@@ -15,7 +15,9 @@ every request, and it may be wrong in one direction only.
 The split is deliberate. Exactness is cheap where the state is one scalar per
 subject and expensive where it is one counter per subject per epoch: a thirty-day
 window at five-minute resolution needs 8{,}640 epochs, so an exact windowed
-accountant for $10^6$ subjects would need $8.6\times10^{9}$ counters. We therefore
+accountant that materialises every (subject, epoch) pair needs
+$8.6\times10^{9}$ counters; a sparse one keeps only the epochs a subject appears
+in, as E16 does, and then pays per event rather than per subject. We therefore
 make the ledger exact and the estimator one-sided, and Section~\ref{sec:analysis}
 proves that the composition preserves both properties.
 

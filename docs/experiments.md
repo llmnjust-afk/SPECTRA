@@ -249,6 +249,33 @@ before the TTL reuses the reservation and charges once, and a crash after commit
 the charge while withholding the answer (the safe direction). A retry after the TTL is
 refused, and the hold returns to the pool.
 
+## E20: an equi-functional exact baseline
+
+The exact baselines in E4 and E16 also lack the window, the breaker and the
+coordinator, so a difference against them cannot be attributed to approximation.
+E20 removes the confound: `build_privfuse(..., PrivFuseConfig(exact=True))` swaps
+the Count-Min sketch for a dense per-subject table (`privfuse/sketch/exact.py`)
+behind the *same* accountant ring, SLO predicate, breaker, admission controller
+and two-phase coordinator.
+
+At the population where a dense table fits (1,500 subjects, 12,000 requests, caps
+1.0 and 0.5, three seeds) the two policies make **identical** admission decisions:
+availability and windowed peak match exactly (maximum per-seed difference 0.0000),
+both have zero hard-cap violations. The exact version is 1.5x faster on average
+(233 against 156 us per request, 1.3-2.4x across runs) and holds 0.37 MB against
+5.01 MB.
+
+The result is deliberately unflattering and bounds the claim: at 10^3 subjects the
+sketch buys nothing but the slope. That slope is the point. The dense table grows
+at roughly 250 bytes per subject, which is 246 MB at 10^6 subjects, while the
+sketch stays at 5 MB; E8 measures the flat curve. An equi-functional exact design
+is therefore the right choice below the crossover and the wrong one above it, and
+the paper should be read as locating that crossover rather than as claiming
+approximation is free.
+
+`results/e20_equiv.csv` holds the rows; `results/e20_equiv_meta.json` records that
+the only difference between the two policies is the accountant store.
+
 ## Reading the numbers
 
 * Violation counts are the load-bearing result; wall-clock numbers are

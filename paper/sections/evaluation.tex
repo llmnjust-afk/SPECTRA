@@ -12,27 +12,28 @@ which the replication study reruns on twelve, and per-seed rows ship with the co
 The generator produces $12{,}000$ requests from $40$ tenants over $1{,}500$
 subjects and three platforms, with popularity from a truncated Zipf law of exponent
 $1.15$ and $15\%$ of requests touching several subjects; every subject carries a cap
-of $\eps{=}1.0$ at $\delta=10^{-5}$. Identities are drawn by inverse transform
-rather than by a power-law draw modulo the population, because the latter maps large
-ranks back onto small ones and removes the heavy hitters that make accounting hard.
+of $\eps{=}1.0$ at $\delta=10^{-5}$. Identities are drawn by inverse transform: a power-law draw modulo the population
+folds large ranks back onto small ones and removes the heavy hitters that make
+accounting hard.
 The splitting attack gives an adversary $12$ target subjects, a budget of
 $0.30\eps$ per target and $k$ fragments from $12$ to $60$, issued under distinct
 identities across platforms.
 
-We compare against five policies: \emph{static quota}, a fixed per-tenant
-allowance that does not measure spend; \emph{token bucket}, a per-tenant rate
-limit; \emph{audit only}, which admits everything and flags subjects afterwards and
-is the deployed status quo; \emph{exact blocking}, which keeps exact counters keyed
-by (tenant, subject) and refuses when that pair is exhausted; and \emph{exact
-global}, which keeps exact per-subject counters shared across tenants and platforms
-but has no window, no breaker and no degradation. \sys\ is the only policy that is
-subject-keyed, cross-platform, time-structured and memory-bounded in its estimator.
+We compare against five policies: \emph{static quota}, a fixed per-platform
+allowance that meters spend but can neither throttle nor window it; \emph{token
+bucket}, a per-subject allowance that refills at $0.05\eps$ per second; \emph{audit only}, which admits everything and
+flags subjects afterwards and is the deployed status quo; \emph{exact blocking},
+the same per-platform counters with the check applied to composed spend; and
+\emph{exact global}, which keeps exact per-subject counters shared across tenants
+and platforms but has no window, no breaker and no degradation. \sys\ is the only
+policy that is subject-keyed across platforms, time-structured and memory-bounded in
+its estimator.
 
 \subsection{Is the Estimator Sound and Accurate?}
 \label{sec:eval-accuracy}
 
-The first question is whether approximation ever produces a false negative,
-because one false negative at admission is a cap violation. Across 24
+Approximation must never produce a false negative: one at admission is a cap
+violation. Across 24
 configurations---four widths, with and without the hot table, three seeds---we
 observe \emph{zero} false negatives. The property is not statistical: it follows from
 Proposition~\ref{prop:onesided}, and the experiment confirms that the implementation

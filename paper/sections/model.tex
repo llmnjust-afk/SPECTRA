@@ -16,10 +16,11 @@ volatile state, but it does not fabricate charges. The ledger is append-only and
 authenticated; anchoring it on a public chain strengthens non-repudiation without
 changing any argument here. Platform code is assumed to
 compute the declared mechanism, with attestation left to orthogonal
-infrastructure~\cite{liu2025yotta,zhu2025auditing}. Out of scope are collusion
-between a platform and a subject, timing and cache side channels in the query
-engine, and a platform that answers with less noise than it charges for; the last
-is a verifiable-computation problem, not an accounting one.
+infrastructure~\cite{liu2025yotta,zhu2025auditing}. $\mathrm{supp}(q)$ follows from the predicate and the platform's
+record index, never from private values, so a refusal reveals only that a budget is
+spent. Out of scope are platform--subject collusion, timing side channels, and a
+platform that answers with less noise than it charges for, which is a
+verifiable-computation problem.
 
 The adversary is a tenant controlling $k\ge1$ accounts, possibly over several
 platforms, choosing queries adaptively as a function of the answers received, and
@@ -49,8 +50,11 @@ cumulative vector charged to $s$ and
 \spend_s(t,W)=\sum_{q\,:\,s\in\mathrm{supp}(q),\; t_q\in(t-W,\,t]} \cost(q)
 \label{eq:window}
 \end{equation}
-for the spend inside a window of length $W$. The hard cap constrains the cumulative
-vector; the SLO constrains the windowed one.
+for the spend inside a window of length $W$. The hard cap is scalar: a cumulative
+vector $c$ is within budget when $g(c)\le E_s$, where
+$g(c)=\eps_{\mathrm{pure}}+\rho+2\sqrt{\rho\ln(1/\delta)}$ converts a pure-DP
+part and a zCDP part to $\eps$ at the market's $\delta$. The SLO constrains the
+windowed spend under the same scalarisation.
 
 \subsection{The Enforcement Problem}
 
@@ -63,8 +67,8 @@ actually executed: $\cost(q)$ in \textsc{normal} mode and $\beta\cost(q)$ in
 \textsc{throttle} mode, where $\beta\in(0,1]$ is the charge scale of
 Section~\ref{sec:design-slo}. If $a(q,t)\in\{\textsc{admit},\textsc{throttle}\}$
 then for every $s\in\mathrm{supp}(q)$,
-$\spend_s(t)+\cost_{\mathrm{exec}}(q)\preceq E_s$ componentwise, and no executed
-transcript ever produces $\spend_s(t)\succ E_s$. The two modes are covered by one
+$g(\spend_s(t)+\cost_{\mathrm{exec}}(q))\le E_s$, and no executed transcript ever
+produces $g(\spend_s(t))>E_s$. The two modes are covered by one
 condition because a throttled query is still answered: what changes is the noise,
 and the charge follows the noise. Soundness is what
 distinguishes enforcement from auditing: it is a statement about the transcript

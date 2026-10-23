@@ -27,6 +27,7 @@ FIGURES = RESULTS / "figures"
 
 BASELINES: dict[str, Callable[[Trace], Any]] = {
     "privfuse": lambda trace: build_privfuse(trace),
+    "privfuse_exact": lambda trace: build_privfuse(trace, PrivFuseConfig(exact=True)),
     "exact_blocking": lambda trace: ExactBlockingPolicy(caps=trace.caps),
     "static_quota": lambda trace: StaticQuotaPolicy(caps=trace.caps),
     "token_bucket": lambda trace: TokenBucketPolicy(caps=trace.caps),

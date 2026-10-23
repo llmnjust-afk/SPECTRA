@@ -9,10 +9,7 @@ privacy~\cite{dwork2006differential} if for every pair of neighbouring datasets 
 and every event $S$, $\Pr[M(D)\in S]\le e^{\eps}\Pr[M(D')\in S]+\delta$. The
 definition is per-release, but composition carries it to a transcript, which is what
 lets a platform promise a bound on \emph{total} leakage rather than on each answer,
-and why the promise needs bookkeeping. Whatever its interpretation---one of the variants surveyed
-in~\cite{desfontaines2019differential}---the quantity to bound is cumulative.
-
-Composition bounds differ in how tightly they track it. R\'enyi
+and why the promise needs bookkeeping. Composition bounds differ in how tightly they track it. R\'enyi
 DP~\cite{mironov2017renyi} gives sharp constants for a fixed number of adaptively
 chosen mechanisms, at the cost of a discrete order grid.
 Zero-concentrated DP~\cite{bun2016concentrated} bounds the R\'enyi divergence of
@@ -26,8 +23,8 @@ with inverse $\rho = \bigl(\sqrt{\ln(1/\delta)+\eps}-\sqrt{\ln(1/\delta)}\bigr)^
 Equation~\eqref{eq:zcdp} is not the tightest known conversion---$f$-DP and
 Gaussian DP sharpen composition for Gaussian mechanisms~\cite{dong2021rejoinder}---but
 it is monotone, invertible and cheap, which is what an admission decision needs.
-Section~\ref{sec:eval-backend} shows that an R\'enyi accountant cannot calibrate a
-target of $\eps{=}0.02$ at all on a practical order grid.
+Section~\ref{sec:eval-backend} shows that an R\'enyi accountant on a grid capped at
+$\alpha_{\max}{=}512$ cannot calibrate $\eps{=}0.02$ at all.
 
 \subsection{The Market Setting}
 \label{sec:bg-market}
@@ -35,7 +32,7 @@ target of $\eps{=}0.02$ at all on a practical order grid.
 We consider a market in which subjects contribute records to one or more
 platforms and tenants buy answers over those records. A permissioned ledger records
 contributions, charges and settlements, so a tenant can verify that an answer
-corresponds to a committed query and that a charge was not dropped. Trustless
+corresponds to a committed query. Trustless
 trading designs provide this for delivery~\cite{liu2025yotta}, and provenance
 mechanisms extend it to derived artifacts~\cite{zhu2025auditing}. What the ledger does not provide is a statement
 about a subject's remaining budget, because that depends on queries answered
@@ -46,7 +43,7 @@ subjects appear in a handful of queries, a small minority in thousands, and it i
 that minority whose budgets bind. Tenants are numerous and mutually distrustful,
 with an incentive to maximise information per unit of budget, including under
 several identities. Queries arrive continuously, so enforcement sits on the
-critical path of every answer and has a latency budget of microseconds.
+critical path of every answer and has a latency budget of tens of microseconds.
 
 \subsection{Approximate Counting for Thresholds}
 \label{sec:bg-sketch}
@@ -70,11 +67,9 @@ reported statistic.
 \subsection{Service-Level Objectives}
 \label{sec:bg-slo}
 
-An SLO is a predicate over a measurement window, not over a lifetime total. The
-distinction matters because a subject's tolerance is typically expressed as ``no
-more than $\eps$ in any thirty days'', which is a sliding window and therefore a
-different object from the cumulative $\eps$ that composition bounds. Enforcing only
-the total exhausts a budget in the first hour; enforcing only the window lets the
-total drift without bound. \sys\ maintains both: a cumulative sketch that never forgets, and a ring of epoch
+An SLO is a predicate over a measurement window, not over a lifetime total. A subject's tolerance is
+typically ``no more than $\eps$ in any thirty days'', a sliding window rather than
+the cumulative $\eps$ that composition bounds: enforcing only the total exhausts the
+budget in the first hour, enforcing only the window lets the total drift. \sys\ maintains both: a cumulative sketch that never forgets, and a ring of epoch
 sketches for windowed queries, with the SLO on the window and a separate hard cap on
 the total.

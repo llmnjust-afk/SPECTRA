@@ -39,18 +39,18 @@ accounting entirely. We argue that privacy budgets should be enforced at
 admission, like any other service-level objective, and present \sys, a runtime
 enforcement layer for multi-tenant data markets. \sys\ rests on three ideas.
 First, admission control needs only a \emph{one-sided} estimate of a subject's
-spend, so an exact per-subject counter can be replaced by a conservative
-Count-Min sketch plus a bounded exact table for heavy hitters, giving estimator memory
-independent of the subject population together with a guarantee that spend is
+spend, so an exact counter can be replaced by a conservative
+Count-Min sketch plus a bounded exact table, giving estimator memory independent of
+the population together with a guarantee that spend is
 never underestimated. Second, budget accounting is a transaction rather than an
 increment, so reservation, commit and release are separated behind a
-subject-striped coordinator that makes splitting and crash-restart attacks
-unprofitable and settlement exactly-once. Third, windowed SLOs with a
+subject-striped coordinator that charges each admitted query once even when
+clients retry or a platform dies mid-query. Third, windowed SLOs with a
 hysteretic breaker turn a cumulative bound into predictable degradation. On
 synthetic populations of up to $10^6$ subjects, \sys\ bounds estimator memory at
 4.7\,MB where exact
 accounting needs 265\,MB, admits 0.93 of requests at a cap of $\eps{=}1.0$ with
-zero violations where exact per-tenant blocking admits 0.98 with 12.7
+zero violations where exact per-platform blocking admits 0.98 with 12.7
 violations on average, and holds the escape ratio at 0.82 while audit-only policies reach
 2.43.
 \end{abstract}

@@ -94,3 +94,23 @@ def test_readmitted_subject_stays_one_sided():
         sketch.add("s0", cost)
         truth = truth + cost
     assert sketch.estimate("s0").eps(1e-5) >= truth.eps(1e-5) - 1e-12
+
+
+def test_exact_sketch_is_exact_and_one_sided():
+    from privfuse.sketch.exact import ExactCostSketch
+
+    sketch = ExactCostSketch()
+    truth: dict[str, CostVector] = {}
+    for i in range(200):
+        subject = f"s{i % 7}"
+        cost = CostVector(eps_pure=0.001 * (i % 3), rho=1e-6 * (i % 5))
+        sketch.add(subject, cost)
+        truth[subject] = truth.get(subject, CostVector.zero()) + cost
+    for subject, expected in truth.items():
+        got = sketch.estimate(subject)
+        assert got.eps_pure == expected.eps_pure
+        assert got.rho == expected.rho
+        assert got.eps(1e-5) >= expected.eps(1e-5) - 1e-12
+    assert sketch.error_bound().is_zero()
+    assert sketch.estimate("absent").is_zero()
+    assert sketch.nbytes() > 0

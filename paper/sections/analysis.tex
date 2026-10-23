@@ -36,22 +36,22 @@ relative error for the top percentile and no false negatives in 24 configuration
 Assume that every platform reserves through the shared coordinator before a query
 executes, that the coordinator is the only writer of a subject's budget, and that
 the cost it charges is the cost of the mechanism the platform executes. Then, for
-every subject $s$ and time $t$, $C_s(t)+F_s(t)\preceq E_s$, the committed charge
+every subject $s$ and time $t$, $g(C_s(t)+F_s(t))\le E_s$, the committed charge
 $C_s(t)$ is non-decreasing, $F_s(t)\succeq0$, and no executed query leaves
-$C_s(t)\succ E_s$---even when tenants split their traffic across accounts and
+$g(C_s(t))>E_s$---even when tenants split their traffic across accounts and
 platforms.
 \end{proposition}
 
 \begin{IEEEproof}
 Let $C_s(t)$ be the committed charge and $F_s(t)$ the sum of live reservations.
 Admission of $q$ at time $t$ requires
-$C_s(t^-)+F_s(t^-)+\cost_{\mathrm{exec}}(q)\preceq E_s$ for every subject in the
+$g(C_s(t^-)+F_s(t^-)+\cost_{\mathrm{exec}}(q))\le E_s$ for every subject in the
 support, and the test and the insertion of the reservation happen under one stripe
 guard per subject, so no other transaction observes $C_s+F$ between them. A live
 reservation of $q$ then undergoes exactly one of three transitions. Commit moves
 $\cost_{\mathrm{exec}}(q)$ from $F_s$ to $C_s$, which leaves $C_s+F_s$ unchanged;
 release removes the same vector from $F_s$; expiry removes it as well. Hence
-$C_s(t)+F_s(t)\preceq E_s$ holds in every reachable state, $C_s$ never decreases
+$g(C_s(t)+F_s(t))\le E_s$ holds in every reachable state, $C_s$ never decreases
 and $F_s\succeq0$, because a reservation leaves $F_s$ the moment it is settled or
 expires. A query that executes carries a committed charge by
 Proposition~\ref{prop:atomic}, and is charged once, so the loss it incurs is
@@ -62,8 +62,9 @@ or the platform.
 
 \begin{proposition}[Exactly-once settlement]
 \label{prop:atomic}
-Under crashes and retries, each admitted query is charged at most once, and no
-answer is delivered without a committed charge.
+Assuming the ledger outlives the coordinator process, each admitted query is
+charged at most once under crashes and retries, and no answer is delivered
+without a committed charge.
 \end{proposition}
 
 \begin{IEEEproof}

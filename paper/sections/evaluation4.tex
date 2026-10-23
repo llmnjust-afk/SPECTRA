@@ -27,17 +27,20 @@ monitor.
 The last row is the honest comparison, and it is less comfortable than it
 suggests. At 1{,}500 subjects exact cumulative accounting matches \sys's
 availability within a point ($0.898$ against $0.906$ at $1.0\eps$; $0.713$ against
-$0.721$ at $0.5\eps$) with 0.38\,MB against 5.0\,MB. Its 19\,$\mu$s per request is not
+$0.721$ at $0.5\eps$) with 0.38\,MB against \sys's 5.05\,MB in the same 600\,s configuration. Its 19\,$\mu$s per request is not
 a like-for-like cost: it runs no breaker, coordinator or window. A windowed exact accountant is likewise implementable (E16, 600\,s window): at
 $0.5\eps$ it admits every request and still lets six of 1{,}500 subjects exceed their
-\emph{lifetime} cap, spending 1.08\,MB against \sys's 5.0\,MB. Windowed enforcement
+\emph{lifetime} cap, spending 1.08\,MB against \sys's 5.05\,MB. Windowed enforcement
 bounds a window, not a lifetime, and at $1.0\eps$ the two are within a point of
-availability ($1.000$ against $0.906$) with one lifetime violation. \sys's case
-therefore rests neither on windows being inexpressible nor on exact tabulation being
-slow at $10^{3}$ subjects, but on $10^{6}$, where the table is 265\,MB.
+availability ($1.000$ against $0.906$) with one lifetime violation. Putting the
+exact table behind the same ring, breaker and coordinator isolates approximation
+from functionality (E20): availability and windowed peak are equal at
+both caps, the exact version is 1.5$\times$ faster on average (233 against
+156\,$\mu$s, 1.3--2.4 across runs) and uses 0.37\,MB against 5.01\,MB. At $10^{3}$ subjects the sketch
+buys nothing but the slope; that slope reaches 246\,MB at $10^{6}$.
 
 On a load oscillating around the threshold, hysteresis and dwell give the breaker
-zero transitions, and without them 26, 13 of them reversals.
+zero transitions; without them, 26, of which 13 are reversals.
 
 \subsection{Why zCDP and Not R\'enyi DP}
 \label{sec:eval-backend}
@@ -52,19 +55,23 @@ $\eps{=}0.023$ with \texttt{reached\_target} false rather than accepting the que
 Basic composition needs $\sigma=240$ for the same target but reports $0.2008$ after
 100 charges, ten times zCDP's budget. At $\eps_q{=}0.1$ the three backends agree to
 within 0.004\% in $\sigma$ and in composed $\eps$ (1.0195 against 1.0194), and at
-$0.5$ to within 0.006\%. The conclusion is narrow: zCDP is the only backend that both
-calibrates the mechanism and composes it without discarding an order of magnitude;
-R\'enyi DP remains right for training-time accounting at larger budgets.
+$0.5$ to within 0.006\%. The conclusion is narrow. At these targets zCDP calibrates in
+closed form and composes without the order-grid floor; a R\'enyi grid extended to
+$\alpha_{\max}\ge1{,}200$ would also calibrate $\eps_q{=}0.02$, at the price of an
+order-dependent conversion that admission must search rather than invert. R\'enyi DP
+remains right for training-time accounting at larger budgets.
 
 \subsection{What Soundness Costs in Utility}
 \label{sec:eval-utility}
 
-The utility experiment spends a subject's whole budget on counting queries over one
-predicate and measures the $F_1$ of each answer against the truth. At
+The utility experiment puts a real dataset behind the cap: a tenant repeatedly
+requests the class-conditional sufficient statistics of a binary classification
+task, each release noised by a Gaussian mechanism, and a Gaussian naive Bayes
+classifier fitted to the noisy statistics is scored on held-out data. At
 $\eps_q{=}1.0$ \sys\ answers one query at 0.823, against 0.900 for an unbounded
-policy that answers 100 queries for 100$\eps$; at $0.5\eps$ two queries at 0.552
+policy that answers 100 queries regardless of cost; at $0.5\eps$ two queries at 0.552
 against 0.881; at $0.25\eps$ four at 0.542 against 0.871, and both baselines exceed
 the cap in every seed, so their accuracy is bought with a violation. The gap at small
 $\eps_q$ is the budget, not overhead: four noisy answers cannot match a hundred.
-Degradation costs less: 699 of 5{,}088 admitted queries are throttled, 13.7\%, worth
-the 4.2 points of availability measured in the ablation.
+Degradation costs less: 699 of 5{,}088 admitted queries are throttled, 13.7\%,
+worth the 4.2 points of availability in the ablation.
