@@ -142,6 +142,24 @@ Part (b) is a two-process loopback measurement, not a multi-node deployment: the
 is no consensus, no replication and no persistent ledger backend. The numbers bound
 the cost of a remote settlement round trip, nothing more.
 
+## E14 — hot-table churn
+
+The hot table is exact for the subjects it holds, so its accuracy depends on the
+traffic staying put. This experiment forces turnover: four epochs, each admitting a
+fresh cohort of heavy subjects (0, 100 or 400 per epoch, 40 queries each), against
+table capacities 256, 32 and 1 (the last is the sketch-only control). Three seeds,
+two caps (1.0 and 0.15 epsilon).
+
+Reported: availability over all decisions, availability over the unchurned base
+requests only (the churn requests add load, so the two differ), hard-cap
+violations, and the relative over-estimate of the accountant's upper bound against
+exact truth, per subject, summarised as mean, p99 and the fraction above 50%.
+
+The expected result is that churn costs accuracy, not safety: an evicted subject is
+re-seeded from the sketch upper bound, so its counter over-estimates but never
+under-estimates. If a churn row ever shows a violation, the re-seeding path is
+wrong.
+
 ## Reading the numbers
 
 * Violation counts are the load-bearing result; wall-clock numbers are

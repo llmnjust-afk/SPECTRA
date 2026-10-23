@@ -16,8 +16,7 @@ in~\cite{desfontaines2019differential}---the quantity to bound is cumulative.
 
 Composition bounds differ in how tightly they track it. R\'enyi
 DP~\cite{mironov2017renyi} gives sharp constants for a fixed number of adaptively
-chosen mechanisms, at the cost of a discrete order grid: the accountant evaluates
-the grid and converts the result to $(\eps,\delta)$.
+chosen mechanisms, at the cost of a discrete order grid.
 Zero-concentrated DP~\cite{bun2016concentrated} bounds the R\'enyi divergence of
 order $1+\alpha$ by $\rho\alpha$ for all $\alpha>1$, composes by adding $\rho$,
 and converts in closed form,
@@ -48,14 +47,12 @@ artifacts~\cite{zhu2025auditing}. What the ledger does not provide is a statemen
 about a subject's remaining budget, because that depends on queries answered
 elsewhere and on charges still in flight.
 
-Three properties of the setting shape the design. The subject population is large
-and heavy-tailed: most subjects appear in a handful of queries, a small minority
-in thousands, and it is that minority whose budgets bind. Tenants are numerous
-and mutually distrustful, and a tenant's incentive is to maximise the information
-it extracts per unit of budget, including under several identities. Queries
-arrive continuously, so the enforcement decision sits on the critical path of
-every answer the platform sells and has a latency budget of microseconds to
-milliseconds.
+Three properties shape the design. The population is large and heavy-tailed: most
+subjects appear in a handful of queries, a small minority in thousands, and it is
+that minority whose budgets bind. Tenants are numerous and mutually distrustful,
+with an incentive to maximise information per unit of budget, including under
+several identities. Queries arrive continuously, so enforcement sits on the
+critical path of every answer and has a latency budget of microseconds.
 
 \subsection{Approximate Counting for Thresholds}
 \label{sec:bg-sketch}

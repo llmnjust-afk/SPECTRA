@@ -192,6 +192,7 @@ the accountant never under-estimates, so the cap is never silently exceeded.
 python3 -m privfuse.experiments.run_all          # core suite
 python3 -m privfuse.experiments.e8_scale         # scale sweep
 python3 -m privfuse.experiments.e13_settlement_scale   # settlement scaling
+python3 -m privfuse.experiments.e14_churn             # hot-table churn
 python3 -m privfuse.cli run e4 --figures         # one experiment
 python3 -m privfuse.cli figures                  # rebuild figures only
 ```

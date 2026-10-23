@@ -22,7 +22,8 @@ accountant to training~\cite{yousefpour2021opacus,abadi2016deep}. All three fix 
 accounting unit to the analyst, assume the analyst is the unit of privacy, and
 settle inside one administrative domain. Prochlo moves enforcement into an enclave
 and removes the trusted server, at the price of fixing the unit to the user and the
-granularity to a batch~\cite{bittau2017prochlo}; IncShrink combines MPC with DP so
+granularity to a batch~\cite{bittau2017prochlo}, a model now studied formally as
+anonymous shuffling~\cite{cheu2019distributed}; IncShrink combines MPC with DP so
 that an outsourced database never sees plaintext, at the price of a cryptographic
 protocol per query~\cite{wang2022incshrink}. None of them charges a \emph{subject}
 whose records sit on several platforms, and none treats the resulting counter as a
@@ -40,8 +41,7 @@ community, with recent designs scaling delivery and
 settlement~\cite{liu2025yotta} and provenance mechanisms tracking derived
 artifacts~\cite{zhu2025auditing}. These answer ``did I receive what I paid for?''.
 Pricing privacy itself has been studied as a negotiation between subject and
-buyer~\cite{jung2019privacy}, which presupposes a budget that can actually be spent
-and tracked. The privacy question---``may this answer be sold at all?''---is
+buyer~\cite{jung2019privacy}, presupposing a budget that can be spent and tracked. The privacy question---``may this answer be sold at all?''---is
 orthogonal and, in our reading of deployments, unaddressed: the ledger records
 payments, not budgets. We keep the ledger as the settlement substrate and add a
 budget root that every platform consults; we are not aware of prior work that makes

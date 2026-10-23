@@ -93,7 +93,7 @@ def fig_e4() -> pathlib.Path | None:
     frame = _load("e4_attack")
     if frame is None:
         return None
-    fig, ax = plt.subplots(figsize=(3.4, 2.25))
+    fig, ax = plt.subplots(figsize=(3.4, 2.05))
     grouped = frame.groupby(["policy", "splits"])["escape_ratio"].mean().reset_index()
     for policy, group in grouped.groupby("policy"):
         ax.plot(
@@ -161,7 +161,7 @@ def fig_e8() -> pathlib.Path | None:
     frame = _load("e8_scale")
     if frame is None:
         return None
-    fig, ax = plt.subplots(2, 1, figsize=(3.4, 3.0), sharex=True)
+    fig, ax = plt.subplots(2, 1, figsize=(3.4, 2.85), sharex=True)
     exact = frame[frame["backend"] == "exact"]
     ax[0].plot(
         exact["subjects"], exact["bytes"] / 1e6, marker="o", markersize=3, linewidth=1.0, label="exact"

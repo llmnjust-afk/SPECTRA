@@ -18,11 +18,11 @@ receipts make under-reporting detectable after the fact, which is weaker than th
 guarantee inside one process; closing the gap needs Byzantine agreement or a proof
 that the charge corresponds to the mechanism executed.
 
-A less obvious problem is that the accounting layer is itself sensitive. The ledger
-records which subjects appear in which queries, and the hot table is close to a list
-of the subjects about whom the most has been asked, so a reader of the accounting
-state learns participation patterns without learning any answer. We have not
-addressed this; accumulators, oblivious access, or an enclave for the hot table each
+The accounting layer is itself sensitive: the ledger records which subjects appear
+in which queries, and the hot table is close to a list of the subjects about whom the
+most has been asked, so a reader of the accounting state learns participation
+patterns without learning any answer. We have not addressed this; accumulators,
+oblivious access, or an enclave for the hot table each
 cost something the current design does not budget for, and in our view this is the
 most important open problem here.
 

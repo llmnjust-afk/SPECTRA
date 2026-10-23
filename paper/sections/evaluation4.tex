@@ -10,23 +10,27 @@ breaker can only admit or refuse, costs 4.2 points of availability (0.881 agains
 17.4\,MB without moving it either: on 1{,}500 subjects the hot table holds everyone
 who matters.
 
+Churn is the cost the capacity sweep hides (E14). Rotating 400 new heavy subjects
+per epoch raises the mean over-estimate from 0.16 to 0.28 at a $0.15\eps$ cap and
+from 0.25 to 0.65 at $1.0\eps$, and the p99 from 1.7$\times$ to 2.5$\times$ and
+2.2$\times$ to 5.1$\times$; at the tight cap it costs 4.5 points of availability.
+Safety is untouched---zero violations in 30 runs---because an evicted subject is
+re-seeded from the sketch upper bound; but the table stops paying for itself, which
+bounds what it can buy against an adversary who chooses the traffic.
+
 The hot-table row is a warning. Disabling the table raises availability from
-0.923 to 0.930 and lowers cost from 101 to 80\,$\mu$s, which looks like a free win
-until one notices that the breaker's flap count falls to zero. The monitor samples
-its violation rate from the hot table, so a capacity of one leaves it with nothing
-to sample and the SLO machinery goes blind. The row is not evidence that the hot
-table hurts: it is evidence that monitor and estimator share a structure, so
-ablating one silently ablates the other.
+0.923 to 0.930 and lowers cost from 101 to 80\,$\mu$s, but the breaker's flap count
+falls to zero: the monitor samples its violation rate from the hot table, so a
+capacity of one blinds the SLO machinery. Ablating the table silently ablates the
+monitor.
 
 
 
-The last row is the honest comparison. At the trace's scale, exact global
-accounting uses less memory and is nine times faster per request, because
-1{,}500 subjects fit comfortably in a hash table. Its disadvantage appears at
-$10^{6}$ subjects (Figure~\ref{fig:scale}), where the table is 265\,MB, and in
-the windowed SLO, which it cannot express at all. A small deployment with a
-cumulative-only policy would be better served by exact counting; \sys\ is the
-right structure when the population is large or the SLO is windowed.
+The last row is the honest comparison: at this scale exact global accounting uses
+less memory and is nine times faster per request, because 1{,}500 subjects fit in a
+hash table. It loses at $10^{6}$ subjects (Figure~\ref{fig:scale}, 265\,MB) and
+cannot express the windowed SLO at all, so \sys\ is the right structure when either
+condition holds.
 
 Stability is measured on a load oscillating around the throttle threshold: with
 hysteresis and dwell the breaker makes zero transitions, and with both disabled it
