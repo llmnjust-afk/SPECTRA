@@ -43,7 +43,6 @@ estimator, so a failed execution costs the subject nothing.
   acct/.style={-{Latex[length=1.2mm,width=0.9mm]}, line width=0.55pt, draw=inkc,
                dashed, dash pattern=on 2.4pt off 1.8pt, rounded corners=3pt},
   lab/.style={font=\scriptsize, inner sep=1.5pt, fill=white, text=inkc},
-  sub/.style={font=\scriptsize, text=inkc!70},
 ]
 \definecolor{inkc}{RGB}{26,26,26}
 \definecolor{ctlfill}{RGB}{237,242,248}
@@ -53,10 +52,10 @@ estimator, so a failed execution costs the subject nothing.
 
 % request path, one row of five stages at fixed x so every gap is the same
 \node[box, text width=2.4cm] (ten)   at (0.0,0)    {\textbf{Tenant account}};
-\node[ctl, text width=2.0cm] (price) at (3.4,0)    {\textbf{Price}\\[1pt]{\sub $q\mapsto\cost$}};
-\node[ctl, text width=3.2cm] (brk)   at (7.4,0)    {\textbf{Breaker}\\[1pt]{\sub normal / throttle / reject}};
-\node[ctl, text width=2.0cm] (coord) at (11.4,0)   {\textbf{Coordinator}\\[1pt]{\sub reserve}};
-\node[box, text width=2.0cm] (exec)  at (14.8,0)   {\textbf{Execute}\\[1pt]{\sub noisy answer}};
+\node[ctl, text width=2.0cm] (price) at (3.4,0)    {\textbf{Price}\\[1pt]{\scriptsize\color{inkc!70} $q\mapsto\cost$}};
+\node[ctl, text width=3.2cm] (brk)   at (7.4,0)    {\textbf{Breaker}\\[1pt]{\scriptsize\color{inkc!70} normal / throttle / reject}};
+\node[ctl, text width=2.0cm] (coord) at (11.4,0)   {\textbf{Coordinator}\\[1pt]{\scriptsize\color{inkc!70} reserve}};
+\node[box, text width=2.0cm] (exec)  at (14.8,0)   {\textbf{Execute}\\[1pt]{\scriptsize\color{inkc!70} noisy answer}};
 
 \draw[ar] (ten)   -- node[lab, above=1pt] {$q$}    (price);
 \draw[ar] (price) -- node[lab, above=1pt] {$\cost$} (brk);
@@ -69,9 +68,9 @@ estimator, so a failed execution costs the subject nothing.
 
 % accounting state
 \node[st, text width=5.6cm] (acc) at (3.6,-2.6)
-      {\textbf{Estimator} (one-sided)\\[1pt]{\sub cumulative sketch $\cdot$ epoch ring $\cdot$ hot table}};
+      {\textbf{Estimator} (one-sided)\\[1pt]{\scriptsize\color{inkc!70} cumulative sketch $\cdot$ epoch ring $\cdot$ hot table}};
 \node[st, text width=5.0cm] (led) at (11.4,-2.6)
-      {\textbf{Settlement ledger} (exact)\\[1pt]{\sub committed $+$ in-flight $\eps$ per subject}};
+      {\textbf{Settlement ledger} (exact)\\[1pt]{\scriptsize\color{inkc!70} committed $+$ in-flight $\eps$ per subject}};
 
 % reserve and commit, straight down into the ledger
 \draw[acct] (coord.south) -- node[lab, right=2pt, pos=0.45] {reserve, commit} (led.north);
