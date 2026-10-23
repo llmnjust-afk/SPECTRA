@@ -198,6 +198,18 @@ python3 -m privfuse.cli figures                  # rebuild figures only
 All randomness is seeded. Wall-clock numbers will differ by machine; the
 violation counts and epsilon ratios will not.
 
+## Paper
+
+The manuscript is in `paper/` (IEEEtran conference format, 10 pages of body
+plus references). Sources are `paper/main.tex` plus one file per section under
+`paper/sections/`, with the bibliography in `paper/refs.bib`.
+
+```bash
+cd paper && make pdf        # latexmk -pdf main.tex
+```
+
+Numbered claims in the paper map to `results/*.csv` through `docs/experiments.md`.
+
 ## License
 
 MIT.

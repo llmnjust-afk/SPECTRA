@@ -1,0 +1,104 @@
+\section{Threat Model and Problem Formulation}
+\label{sec:model}
+
+\subsection{Entities, Trust and Adversary}
+
+A market instance comprises subjects $\mathcal{S}$ with $|\mathcal{S}|=N$,
+platforms $\mathcal{P}$ with $|\mathcal{P}|=n_p$, tenants $\mathcal{T}$, and an
+append-only ledger $\mathcal{L}$. Each subject $s$ contributes records to one or
+more platforms and carries a declared cap $E_s$ on cumulative privacy loss,
+together with an SLO that says how the cap may be spent over time. Each tenant
+submits queries naming a predicate over the contributed records and the platforms
+on which it is to be evaluated; the receiving platform prices the query, obtains
+an admission decision, evaluates the noisy answer, and settles the charge.
+
+The coordinator is \emph{crash-faulty but not Byzantine}: it may stop and lose
+volatile state, but it does not fabricate charges. The ledger is append-only and
+authenticated; anchoring it on a public chain strengthens non-repudiation without
+changing any argument here. Platform code is assumed to
+compute the declared mechanism, with attestation left to orthogonal
+infrastructure~\cite{liu2025yotta,zhu2025auditing}. Out of scope are collusion
+between a platform and a subject, timing and cache side channels in the query
+engine, and a platform that answers with less noise than it charges for; the last
+is a verifiable-computation problem, not an accounting one.
+
+The adversary is a tenant controlling $k\ge1$ accounts, possibly over several
+platforms, choosing queries adaptively as a function of the answers received, and
+aiming to extract more about a target subject than its cap allows. Because the
+ledger charges accounts rather than subjects, its natural strategy is
+\emph{splitting}: divide a sequence that together exceeds $E_s$ into $k$
+fragments, each individually within the per-account allowance, and issue the
+fragments under distinct identities. Splitting is what a rational tenant does
+when the price of a query is sub-linear in the information it yields; our traces
+sweep $k$ from 12 to 60. The adversary
+may also crash the coordinator. Charging before execution and crashing loses the
+charge; charging after execution and crashing delivers the answer for free.
+Either direction breaks the accounting without any cryptographic failure, which
+is why settlement is part of the privacy mechanism rather than a billing detail.
+The adversary may inspect the ledger, replay transactions and race submissions.
+
+\subsection{Cost Model}
+
+Every query $q$ carries a cost vector
+$\cost(q)=(\eps_{\mathrm{pure}},\rho,\delta)$ describing the loss charged to
+\emph{each} subject in its support. For a Gaussian mechanism with sensitivity
+$\Delta$ and scale $\sigma$, $\rho=\Delta^{2}/(2\sigma^{2})$ and
+$\eps_{\mathrm{pure}}=0$; for a Laplace mechanism with scale $b$,
+$\eps_{\mathrm{pure}}=\Delta/b$ and $\rho=0$. Charges add in $\rho$ under zCDP
+composition and in $\eps_{\mathrm{pure}}$ under pure DP composition, so the cost
+of a transcript is the vector sum of its queries. Write $\spend_s(t)$ for the
+cumulative vector charged to $s$ and
+\begin{equation}
+\spend_s(t,W)=\sum_{q\,:\,s\in\mathrm{supp}(q),\; t_q\in(t-W,\,t]} \cost(q)
+\label{eq:window}
+\end{equation}
+for the spend inside a window of length $W$. The hard cap constrains the
+cumulative vector; the SLO constrains the windowed one.
+
+\subsection{The Enforcement Problem}
+
+An enforcement mechanism is a function
+$a:(q,t)\mapsto\{\textsc{admit},\textsc{throttle},\textsc{reject}\}$ evaluated
+before $q$ executes. Four properties are required.
+
+\emph{Soundness.} If $a(q,t)=\textsc{admit}$ then for every
+$s\in\mathrm{supp}(q)$, $\spend_s(t)+\cost(q)\preceq E_s$ componentwise, and no
+admitted transcript ever produces $\spend_s(t)\succ E_s$. Soundness is what
+distinguishes enforcement from auditing: it is a statement about the transcript
+that is never released, not about a sample of past releases.
+
+\emph{Availability.} Let $A$ be the admitted fraction and $U$ the total value of
+admitted answers. A mechanism should maximise $A$ and $U$ subject to soundness,
+and in particular should not refuse a query that is provably safe.
+
+\emph{Stability.} Let $\tau$ be the number of mode transitions per epoch.
+Oscillation between admitting and refusing is a cost not captured by $A$, because
+a tenant that cannot predict admission cannot plan a workload; we require $\tau$
+to be bounded as a function of the hysteresis and dwell parameters.
+
+\emph{Atomicity.} For every execution, including those with crashes and
+concurrent submissions, the charge committed to a subject equals the sum of costs
+of the queries admitted for that subject, each query is charged at most once, and
+no in-flight reservation is counted as available capacity.
+
+The SLO specification is $(\theta_{\mathrm{soft}},p,W)$ with
+$\theta_{\mathrm{soft}}=\alpha E_s$ for a soft ratio $\alpha\in(0,1)$: the
+fraction of subject-epochs whose windowed spend exceeds $\theta_{\mathrm{soft}}$
+must not exceed $p$, and no subject-epoch may exceed $E_s$. The two thresholds
+are deliberately separate. The soft threshold is a target the breaker may miss
+under adversarial load and $p$ bounds how often; the hard cap is never a target,
+and one violation is a failure of the mechanism rather than a degradation of
+service.
+
+\subsection{Success Criterion for an Attacker}
+
+To compare mechanisms under splitting we report the \emph{escape ratio}
+\begin{equation}
+R=\max_{s\in\mathcal{S}}\;\spend_s(\infty)/E_s ,
+\label{eq:escape}
+\end{equation}
+the worst-case ratio of the loss a subject actually incurred to the cap the
+subject declared. $R\le1$ certifies soundness on the trace; $R>1$ quantifies the
+leak. The ratio folds the effect of splitting, of per-account keying and of the
+composition rule into one quantity that is comparable across mechanisms, and it
+is the quantity a regulator would ask for after the fact.

@@ -1,0 +1,82 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds,calc}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{placeins}
+\usepackage{balance}
+
+\newcommand{\sys}{PrivFuse}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\cost}{\mathbf{c}}
+\newcommand{\spend}{\sigma}
+
+\newtheorem{proposition}{Proposition}
+
+\begin{document}
+
+\title{\sys: Enforcing Privacy SLOs at Admission Time in Multi-Tenant Data Markets}
+
+\author{\IEEEauthorblockN{Anonymous Submission}
+\IEEEauthorblockA{Paper ID: \texttt{xxxx}}}
+
+\maketitle
+
+\begin{abstract}
+Data trading platforms sell answers computed over personal records contributed
+by many subjects, and they serve many tenants concurrently. Each subject is
+promised a bound on cumulative differential-privacy loss, but the promise is
+enforced today by accounting after the fact: budgets are tallied offline, keyed
+per tenant, and reconciled in batches. A tenant that splits its traffic across
+accounts or platforms therefore spends the same subject's budget many times
+over, and a crash between deciding and recording a query destroys the
+accounting entirely. We argue that privacy budgets should be enforced at
+admission, like any other service-level objective, and present \sys, a runtime
+enforcement layer for multi-tenant data markets. \sys\ rests on three ideas.
+First, admission control needs only a \emph{one-sided} estimate of a subject's
+spend, so an exact per-subject counter can be replaced by a conservative
+Count-Min sketch plus a bounded exact table for heavy hitters, giving estimator memory
+independent of the subject population together with a guarantee that spend is
+never underestimated. Second, budget accounting is a transaction rather than an
+increment, so reservation, commit and release are separated behind a
+subject-striped coordinator that makes splitting and crash-restart attacks
+unprofitable and settlement exactly-once. Third, windowed SLOs with a
+hysteretic breaker turn a cumulative bound into predictable degradation. On
+traces with $10^6$ subjects, \sys\ bounds memory at 4.7\,MB where exact
+accounting needs 265\,MB, admits 0.93 of requests at a cap of $\eps{=}1.0$ with
+zero violations where exact per-tenant blocking admits 0.98 with 12.7
+violations, and holds the escape ratio at 0.82 while audit-only policies reach
+2.43.
+\end{abstract}
+
+\begin{IEEEkeywords}
+differential privacy, data markets, admission control, privacy accounting,
+service-level objectives, count-min sketch
+\end{IEEEkeywords}
+
+\input{sections/intro}
+\input{sections/background}
+\input{sections/model}
+\input{sections/design}
+\input{sections/design2}
+\input{sections/design3}
+\input{sections/analysis}
+\input{sections/implementation}
+\input{sections/evaluation}
+\input{sections/evaluation2}
+\input{sections/evaluation3}
+\input{sections/evaluation4}
+\input{sections/evaluation5}
+\input{sections/related}
+\input{sections/discussion}
+\input{sections/conclusion}
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}

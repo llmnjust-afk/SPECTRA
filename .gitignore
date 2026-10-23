@@ -13,3 +13,12 @@ PAT
 *.pem
 .env
 .DS_Store
+*.aux
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.log
+*.out
+*.synctex.gz
+*.toc

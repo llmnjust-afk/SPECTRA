@@ -1,0 +1,85 @@
+\section{Design}
+\label{sec:design}
+
+\subsection{Overview}
+\label{sec:design-overview}
+
+\sys\ sits between the query planner and the execution engine of every platform,
+and it holds two kinds of state that answer different questions. The
+\emph{settlement ledger} answers ``what has this subject been charged, and what
+is still in flight?''. It is exact, it is the authority for the hard cap, and it
+has no time structure. The \emph{estimator} answers ``how fast is this subject's
+budget being consumed, relative to the window?''. It has time structure, it is
+consulted on every request, and it may be wrong in one direction only.
+
+The split is deliberate. Exactness is cheap where the state is one scalar per
+subject and expensive where it is one counter per subject per epoch: a thirty-day
+window at five-minute resolution needs 8{,}640 epochs, so an exact windowed
+accountant for $10^6$ subjects would need $8.6\times10^{9}$ counters. We
+therefore make the ledger exact and the estimator one-sided, and
+Section~\ref{sec:analysis} proves that the composition preserves both properties.
+
+Figure~\ref{fig:arch} shows the request path. A query arrives with a declared
+sensitivity and target $\eps$, and the pricer converts it into a cost vector. The
+breaker combines subject-level pressure from the estimator with tenant-level
+pressure from the observed soft-violation rate and selects a mode. In
+\textsc{normal} mode the full cost is reserved; in \textsc{throttle} mode the
+query is answered with a reduced charge, hence more noise and less utility; in
+\textsc{reject} mode it is refused without touching data. Reservation is
+two-phase against the ledger, and only a committed charge is published to the
+estimator, so a failed execution costs the subject nothing.
+
+\begin{figure*}[tb]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  base/.style={draw, rounded corners=2pt, align=center, minimum height=9mm,
+               inner sep=3pt, fill=white},
+  ctl/.style={base, fill=blue!6},
+  st/.style={base, fill=orange!12},
+  ar/.style={-{Latex[length=1.5mm]}, thick},
+  lab/.style={font=\scriptsize, inner sep=1.5pt, fill=white},
+]
+\node[base, text width=1.8cm] (ten)   at (0.0,0)  {Tenant\\account};
+\node[ctl,  text width=1.8cm] (price) at (2.9,0)  {Price\\$q\mapsto\cost$};
+\node[ctl,  text width=2.5cm] (brk)   at (6.1,0)  {Breaker\\normal / throttle / reject};
+\node[ctl,  text width=2.0cm] (coord) at (9.3,0)  {Coordinator\\reserve};
+\node[base, text width=2.0cm] (exec)  at (12.1,0) {Execute\\noisy answer};
+\node[st, text width=5.2cm] (acc) at (3.6,-2.3)
+      {\textbf{Estimator} (one-sided)\\cumulative sketch $\cdot$ epoch ring $\cdot$ hot table};
+\node[st, text width=5.0cm] (led) at (10.2,-2.3)
+      {\textbf{Settlement ledger} (exact)\\committed $+$ in-flight $\eps$ per subject};
+
+\draw[ar] (ten) -- node[lab,above]{$q$} (price);
+\draw[ar] (price) -- node[lab,above]{$\cost$} (brk);
+\draw[ar] (brk) -- node[lab,above]{mode} (coord);
+\draw[ar] (coord) -- node[lab,above]{ok} (exec);
+\draw[ar] (exec.north) -- (12.1,0.95) -- (0.0,0.95) -- (ten.north);
+\node[lab] at (6.1,0.95) {answer};
+\draw[ar] (exec.east) -- (13.6,-1.6) -- (13.6,-3.3) -- (3.6,-3.3) -- (acc.south);
+\node[lab] at (8.4,-3.3) {observe};
+\draw[ar, dashed] (coord.south) -- node[lab,left,pos=0.35]{reserve,\ commit} (led.north);
+\draw[ar, dashed] (acc.north) -- node[lab,above right]{$\hat{\eps}$, rate} (brk.south);
+\end{tikzpicture}
+\caption{Request path. Solid arrows carry requests and answers, dashed arrows carry
+accounting state. The ledger enforces the cumulative cap exactly; the estimator
+supplies windowed and tenant-level pressure and may over-estimate but never
+under-estimate.}
+\label{fig:arch}
+\end{figure*}
+
+\subsection{Pricing a Query}
+\label{sec:design-price}
+
+A query plan declares a sensitivity upper bound $\Delta$ and a target
+per-query $\eps_q$ at a fixed $\delta$. Under zCDP the platform answers with a
+Gaussian mechanism whose scale is $\sigma=\Delta/\sqrt{2\rho_q}$, where $\rho_q$
+inverts \eqref{eq:zcdp} at $\eps_q$; a Laplace mechanism is priced with
+$\eps_{\mathrm{pure}}=\Delta/b$ and $\rho=0$. The resulting $\cost(q)$ is the unit
+of account for every structure that follows, and the inversion is what lets a
+tenant ask for ``$\eps_q{=}0.25$ per query'' and receive a price in $\rho$ that
+composes without further conversion. Pricing is conservative in one respect: the
+pricer takes an upper bound on sensitivity rather than a point estimate, because
+an under-priced query is an unbounded liability while an over-priced one merely
+triggers the breaker early. The controller never re-prices between reservation
+and commit, so a crash cannot change the price of an answer already computed.

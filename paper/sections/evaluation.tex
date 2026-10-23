@@ -1,0 +1,98 @@
+\section{Evaluation}
+\label{sec:eval}
+
+\subsection{Methodology}
+\label{sec:eval-method}
+
+We run on a two-vCPU container with 4\,GiB of RAM, CPython 3.11, and a single
+process. The host is deliberately small: it removes any temptation to attribute a
+result to parallelism and makes the absolute latencies a conservative upper bound.
+Every experiment is repeated on three seeds and we report the mean; per-seed rows
+are committed with the code.
+
+The generator produces $12{,}000$ requests from $40$ tenants over $1{,}500$
+subjects and three platforms, with subject popularity drawn from a truncated Zipf
+law of exponent $1.15$ over ranks and $15\%$ of requests touching more than one
+subject. Each subject carries a cap of $\eps{=}1.0$ at $\delta=10^{-5}$. The
+splitting attack adds an adversary controlling $12$ target subjects, divides a
+fixed budget of $0.30\eps$ per target into fragments, and issues them under
+distinct tenant identities across platforms; we sweep the fragment count from
+$12$ to $60$. Identities are drawn by inverse transform from the truncated law
+rather than by a power-law draw modulo the population, because the latter maps
+large ranks back onto small ones and removes exactly the heavy hitters that make
+accounting hard.
+
+We compare against five policies: \emph{static quota}, a fixed per-tenant
+allowance that does not measure spend; \emph{token bucket}, a per-tenant rate
+limit; \emph{audit only}, which admits everything and flags subjects afterwards and
+is the deployed status quo; \emph{exact blocking}, which keeps exact counters keyed
+by (tenant, subject) and refuses when that pair is exhausted; and \emph{exact
+global}, which keeps exact per-subject counters shared across tenants and platforms
+but has no window, no breaker and no degradation. \sys\ is the only policy that is
+subject-keyed, cross-platform, time-structured and memory-bounded in its estimator.
+
+\subsection{Is the Estimator Sound and Accurate?}
+\label{sec:eval-accuracy}
+
+The first question is whether approximation ever produces a false negative,
+because one false negative at admission is a cap violation. Across 24
+configurations---four widths, with and without the hot table, three seeds---we
+observe \emph{zero} false negatives. The property is not statistical: it follows
+from Proposition~\ref{prop:onesided}, and the experiment confirms that the
+implementation respects it, including on the eviction and re-admission path that
+the seeding rule exists to handle.
+
+Accuracy separates along the population. For the top percentile of subjects by
+spend---the ones whose budgets bind---relative error is 4.3\% without a hot table
+at width 512, 0.10\% with one, and 0.02\% at width 2048 and above, where the hot
+table rather than the width is doing the work. For the tail, absolute error is
+the meaningful quantity: mean absolute error is 0.071$\eps$ at width 512 and
+0.013 at width 2048, while p99 absolute error falls from 0.37 to 0.10. At width
+32{,}768 the measured error is exactly zero on this trace, because the sketch is
+wider than the number of distinct keys; that configuration costs 2.1\,MB and is
+not the one we deploy. The reading is that the hot table makes the estimator
+usable for enforcement and the sketch makes it cheap: without hot tracking a
+deployment would need width 32{,}768 for the same heavy-hitter accuracy and would
+still over-estimate the tail by 0.007$\eps$ on average.
+
+\subsection{What Does It Cost?}
+\label{sec:eval-cost}
+
+The estimator costs 27--32\,$\mu$s per request across widths from $2^{10}$ to
+$2^{16}$, against 4.6\,$\mu$s for an exact table on the same trace. The step from
+$2^{10}$ to $2^{14}$ is 27.3 to 32.1\,$\mu$s, about 18\% for a sixteen-fold increase
+in width, as expected from eight memory accesses per update plus the hot-table
+lookup. At a query latency of milliseconds---the realistic
+range for a DP aggregation over a sharded store---the accountant is 1--3\% of the
+budget, and the exact-table comparison shows that the approximation is not the
+expensive part of enforcement; the breaker and the coordinator are.
+
+Memory tells the opposite story at small scale. For $5{,}000$ subjects the sketch
+occupies 5.57\,MB at width $2^{14}$ while the exact table occupies 1.28\,MB, so
+the sketch is 4.3 times \emph{larger}. The crossover is around
+$2\times10^{4}$ subjects, and only above it does the asymptotic argument bite.
+Figure~\ref{fig:scale} measures the regime that matters: from $10^{3}$ to
+$10^{6}$ subjects the exact accountant grows from 1.1\,MB to 264.6\,MB, while the
+sketch stays at 4.70\,MB (width $2^{12}$) and 6.27\,MB (width $2^{14}$). At
+$10^{6}$ that is a factor of 42 to 56, and the gap widens linearly. Per-request
+cost grows more than we expected, from 14\,$\mu$s at $10^{3}$ subjects to
+27\,$\mu$s at $10^{6}$, because a larger key space means more hot-table entries
+and worse locality; the estimate remains one-sided throughout, with maximum
+absolute error 0.057$\eps$ and worst hot-subject relative error 4.3\%.
+
+\begin{figure}[tb]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig7_scale.png}
+\caption{Accountant state and per-request cost as the subject population grows
+(E8). The exact accountant grows linearly with $N$; the sketch is flat in $N$
+and pays a modest per-key locality penalty. Zero under-estimates at every
+population.}
+\label{fig:scale}
+\end{figure}
+
+This shows that the structure answering windowed queries and computing pressure has
+memory independent of $N$, and that a naive windowed accountant---one cumulative
+structure per epoch---would multiply the measured 264.6\,MB by the ring depth. It
+does not show that the whole system is $O(1)$ in $N$: the ledger keeps one scalar
+balance per subject that has ever transacted, which settlement requires, is far
+smaller per subject than a cost vector, and would be sharded in a deployment.

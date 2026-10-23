@@ -1,0 +1,107 @@
+\section{Introduction}
+\label{sec:intro}
+
+A data trading platform does not sell records. It sells answers: counts,
+summaries and trained statistics computed over personal data that many subjects
+contributed and that many tenants query concurrently. Blockchain-backed designs
+have made the settlement half of this exchange almost routine, with smart
+contracts escrowing payment and releasing keys against
+delivery~\cite{liu2025yotta}. The privacy half has not kept pace. A platform can
+prove that a tenant paid, and that a delivered object matches a committed digest,
+but it cannot say whether answering one more query would push some subject past
+the privacy budget the platform promised when the data was collected. That
+question is not about a single query; it is about the accumulated transcript of
+every query that touched the subject, from every tenant, on every platform of the
+market.
+
+Differential privacy (DP) supplies the language for exactly this kind of
+statement~\cite{fioretto2024differential,desfontaines2019differential}. Its
+guarantee is compositional: the loss of a sequence of mechanisms is a function of
+the individual losses, so an operator who charges each release against a
+per-subject budget can bound the leakage of the
+transcript~\cite{mironov2017renyi,bun2016concentrated}. The governance
+literature has largely taken the budget for granted, treating it as a parameter
+of policy rather than a running quantity that must be measured, reserved and
+settled~\cite{majedi2024privacy,kapp2024collection}. Practice has followed suit:
+budgets are compiled into policy documents, tallied in offline jobs, and
+reconciled at the end of an accounting period. Auditing tools then estimate
+whether the released artifacts respected the promise, either by attacking the
+mechanism~\cite{cohen2018linear,ganev2026tight} or by comparing provable and
+empirical bounds~\cite{modi2026revisiting}, and the governance literature
+supplies the organisational scaffolding for such
+post-market~\cite{mokander2021conformity} and ethics-based~\cite{mokander2021ethicsbased}
+review.
+
+Retrospective accounting is defensible when a single curator releases a fixed set
+of statistics. It fails in a market, for three reasons that compound. First, the
+accounting unit is wrong. Budgets are keyed by tenant because the tenant pays,
+but the loss accrues to the subject, and a tenant that can open accounts at
+several platforms---or simply at several tenants of one platform---converts one
+budget into many. Second, the decision point is wrong. By the time an audit
+reports an overspend the answers have been released and cannot be recalled.
+Third, the bookkeeping is not a counter but a transaction. A crash between
+admission and settlement either loses the charge, so the next query is admitted
+against a budget that was already consumed, or duplicates it, so availability
+collapses for no reason. Our measurements make the first failure concrete: a
+tenant that splits a budget across 42 accounts achieves an escape ratio of 2.43
+against audit-only enforcement and 1.69 against exact per-tenant blocking, and
+neither number is visible to the platform until after the fact.
+
+The obvious repair---keep an exact counter for every subject---does not survive
+scale. At $10^6$ subjects the counter table alone occupies 265\,MB, it must be
+consulted on the critical path of admission, and it must be updated atomically,
+which serialises the coordinator. We take a different route, and it rests on one
+observation: admission control does not need to know a subject's spend, only
+whether it has crossed a threshold. That predicate tolerates error in one
+direction and not the other. An over-estimate costs availability, because a safe
+query is refused; an under-estimate costs soundness, because a cap is breached.
+If the estimator is one-sided---never below the truth---the platform can trade
+availability for memory without trading away the guarantee.
+
+\sys\ turns this into a runtime enforcement layer. A conservative Count-Min
+sketch over (subject, cost) keys answers threshold queries in constant memory and
+is one-sided by construction, because its update rule raises only the cells that
+fall below the running minimum. A bounded exact table holds the heavy hitters,
+whose budgets are the ones that bind, and a subject returning after eviction is
+seeded with the sketch's upper bound for its past so that the exact path never
+starts below the sketch. A windowed SLO evaluator and a hysteretic breaker turn a
+cumulative bound into a predictable degradation curve, and a two-phase settlement
+protocol with a subject-striped coordinator makes admission atomic, idempotent,
+and robust to a crash between reserve and commit. The composition algebra is
+zero-concentrated DP, chosen not for tightness but because it is closed-form and
+invertible: admission must price a query and calibrate a target budget in
+microseconds, and the discrete order grid of R\'enyi DP cannot calibrate small
+targets at all (Section~\ref{sec:eval-backend}).
+
+This paper makes four contributions.
+\begin{enumerate}
+\item We formulate privacy enforcement in a data market as an admission-control
+problem with service-level semantics: a per-subject cap over a sliding window, a
+tenant model in which the adversary is the splitter, and four objectives
+(soundness, availability, stability, atomicity) that must hold together
+(Section~\ref{sec:model}).
+\item We give a one-sided sketch accountant whose estimator memory is
+independent of the subject population, prove that it never underestimates spend,
+and show that hot-table seeding preserves one-sidedness across eviction
+(Section~\ref{sec:design-accountant}, Proposition~\ref{prop:onesided}).
+\item We recast budget accounting as a transaction and give a striped coordinator
+with reserve/commit/release, establishing exactly-once settlement and
+single-spend safety under concurrent and crashing clients
+(Section~\ref{sec:design-settle}, Propositions~\ref{prop:safety}
+and~\ref{prop:atomic}).
+\item We implement \sys\ as a reference system and evaluate it on twelve
+experiments over three seeds, including an ablation, a sensitivity sweep and a
+scaling study to $10^6$ subjects (Section~\ref{sec:eval}).
+\end{enumerate}
+
+The measurements separate what the design buys from what it costs. At a cap of
+$\eps{=}1.0$, \sys\ admits 0.933 of requests with zero hard-cap violations, while
+exact per-tenant blocking admits 0.978 and violates the cap 12.7 times per run;
+the 4.5-point availability gap is the price of soundness. Estimator memory falls
+from 265\,MB to 4.7\,MB at $10^6$ subjects, and the sketch path costs
+32\,$\mu$s per request against 4.6\,$\mu$s for an exact table, a gap that is
+invisible next to query execution. The escape ratio stays at 0.82 however finely
+the attacker splits, because splitting does not change the subject key, while
+audit-only enforcement rises to 2.43. We also report where the design does not help: striping
+brings no throughput on two cores, and the SLO monitor loses coverage when the hot
+table is small.

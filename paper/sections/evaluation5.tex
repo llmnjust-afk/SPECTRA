@@ -1,0 +1,30 @@
+\subsection{Settlement and Concurrency}
+\label{sec:eval-concurrency}
+
+The settlement invariants are checked directly: a repeated commit charges once, a
+timeout releases the reservation, a repeated reserve returns the same reservation
+and cannot be re-bound to another tenant, a crash between reserve and commit
+leaves no double spend, and an expired reservation is recovered. All five pass.
+We report them because the failure they prevent is invisible in aggregate
+statistics: a lost charge does not change availability or utility, it only makes
+the next query admissible.
+
+The concurrency experiment is where our results are negative. In the atomicity
+test, 16 threads issue 3{,}200 attempts against a subject whose cap funds exactly
+100 charges. Every thread count from 2 to 16 admits exactly 100, spends exactly
+$1.0\eps$, and records zero violations, so check-and-reserve is atomic in practice
+and not only in argument. Throughput does not follow. Striped locking reaches
+71.9k operations per second on one thread, 67.3k on two and 49.6k on four, while a
+single global lock reaches 99.6k on one thread and 51.0k on four. Striping costs
+28\% of single-thread throughput, because acquiring several locks is dearer than
+acquiring one, and it does not recover the loss at four threads on a two-core
+host, where the global lock is not the bottleneck and CPython's interpreter lock
+is. We expected the striped design to win at four threads and it does not; the
+fair statement is that striping removes a serialisation point that would bind on
+a many-core host with a blocking storage backend.
+
+Two caveats follow. The coordinator is a single process, so the numbers bound the
+protocol rather than a distributed deployment; a Fabric-backed ledger adds a round
+trip per commit, which we did not measure. And the throughput test uses one subject,
+maximising contention; a workload over disjoint subjects would exercise the stripes
+as intended.

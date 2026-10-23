@@ -1,0 +1,42 @@
+\section{Discussion}
+\label{sec:discussion}
+
+Three principles seem to us more transferable than the specific parameters. Split
+the accounting state by the kind of question it answers: exact where the quantity
+is money and must be settled, one-sided where it has time structure and must be
+cheap. Key every charge on the party that bears the loss rather than the party that
+pays, because the gap between the two is the gap an adversary exploits. And treat
+the charge as a transaction with a commit point, because a counter that can be
+incremented without one will eventually be incremented twice or not at all.
+
+The deployment path we have in mind replicates the coordinator across a small set
+of consensus nodes, owns each subject on one node so the critical section stays
+local, and shards the ledger by subject range. That removes the single-process
+bottleneck but introduces a trust question we have not solved: a subject's budget
+now lives on one node, and a malicious node could under-report a charge. Signed
+receipts make under-reporting detectable after the fact, which is weaker than the
+guarantee inside one process; closing the gap needs Byzantine agreement or a proof
+that the charge corresponds to the mechanism executed.
+
+A less obvious problem is that the accounting layer is itself sensitive. The ledger
+records which subjects appear in which queries, and the hot table is close to a list
+of the subjects about whom the most has been asked, so a reader of the accounting
+state learns participation patterns without learning any answer. We have not
+addressed this; accumulators, oblivious access, or an enclave for the hot table each
+cost something the current design does not budget for, and in our view this is the
+most important open problem here.
+
+Two further limitations bound the claims. The SLO monitor samples the hot table, so
+its coverage depends on the hot capacity, and sampling the epoch ring directly is a
+fix we have not evaluated. And the adversary chooses its split in advance; one that
+observes throttling and re-times its fragments could extract more than our ratios
+suggest, though the key still binds it.
+
+What would falsify the approach? If a market's population is small and its policy
+cumulative, exact counting is cheaper and faster, as our ablation shows at
+$1{,}500$ subjects; with one platform, per-tenant quotas are already sound. If a
+query's cost cannot be predicted before execution---because its sensitivity depends
+on the data---admission must price conservatively or fall back to post-hoc charging,
+and the guarantee weakens to the one the auditing literature provides. The design is
+for the case that remains: many subjects, several platforms, many tenants, and a
+promise that must hold before the answer leaves the building.

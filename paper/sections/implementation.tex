@@ -1,0 +1,20 @@
+\section{Implementation}
+\label{sec:impl}
+
+\sys\ is a reference implementation in Python 3.11: about 4{,}200 lines across 44
+modules with 37 unit tests. The enforcement core has no dependency outside the
+standard library; NumPy, pandas and matplotlib are used only by the experiment
+drivers, so the measured per-request cost is not an artefact of a numerical stack.
+The package separates cost algebra, the sketch layer, the accountant, the SLO
+predicate and breaker, the ledger and coordinator, the platform harness and one
+module per experiment.
+
+Two components are stubs. The ledger backend has an in-memory implementation and
+a Hyperledger Fabric adapter that raises \texttt{NotImplementedError}; the
+coordinator's safety argument does not depend on the backend, which sees only
+reserve, commit and release, but we do not measure Fabric latency and our
+throughput numbers are a lower bound on the settlement path. The attestation
+interface ships with a null attester, since verifying that a platform executed the
+mechanism it charged for needs remote attestation or verifiable computation.
+Every random choice is seeded and each experiment writes raw rows to CSV with a
+metadata file, so a single command regenerates every table and figure here.
