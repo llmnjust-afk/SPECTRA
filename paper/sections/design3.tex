@@ -16,7 +16,7 @@ accumulated less than the eviction threshold, so the subjects most likely to
 violate are the ones the table holds. This keeps the monitor's cost independent of $N$ and
 concentrates attention where violations are most likely, but the rate is over the
 monitored set, not the population: a subject outside it can still violate when the
-$H$ ahead of it do. The
+$H$ ahead of it do. The loop is best-effort feedback; the hard cap is the guarantee. The
 tenant-level rate is refreshed every 64 evaluations, bounding staleness at the cost
 of a lag between a change in behaviour and the breaker's response.
 
