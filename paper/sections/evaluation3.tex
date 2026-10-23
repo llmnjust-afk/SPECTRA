@@ -7,9 +7,9 @@ at which the SLO is satisfied from 0.25 to 1.0. The hard cap never moves: there 
 zero violations at every setting, so tightening the soft target costs throughput
 and never soundness. The knobs are not independent: at $\alpha{=}0.55$ the monitored violation rate is
 2.2\%, so the SLO holds only for $p\ge5\%$, while at $\alpha\ge0.85$ it is at most
-0.22\% and the default $p{=}1\%$ holds. Operators therefore choose a tight target with a loose rate or the reverse, about
-4.5 points of availability apart, but not both tight: a small set of subjects
-crosses any threshold near zero whatever the policy.
+0.22\% and the default $p{=}1\%$ holds. Operators choose a tight target with a
+loose rate or the reverse, 4.5 points of availability apart, not both: a small set
+of subjects crosses any threshold near zero whatever the policy.
 
 The sensitivity sweep varies one factor at a time around the default and uses a
 single seed per point, so it locates trends rather than estimating their

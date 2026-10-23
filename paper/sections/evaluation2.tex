@@ -8,9 +8,14 @@ lets 12.7 subjects exceed the cap on average, the worst of them reaching $1.69\e
 Static quota behaves similarly at 0.956 availability and the same violation count.
 The baselines' counters are exact; the violations are caused by the key. A subject
 charged against forty tenant budgets can accumulate forty times the cap; on this
-trace natural traffic alone pushes a dozen subjects past it. The escape ratio of Fig.~\ref{fig:attack} reaches a similar number at
-$k{=}60$, but it measures spend against a fixed adversary budget rather than against
-the cap.
+trace natural traffic alone pushes a dozen subjects past it. Fig.~\ref{fig:attack} sweeps the fragment count at a fixed adversary budget.
+
+An adversary that sees the decision can re-plan (E18): halving a fragment after each
+refusal raises \sys's composed loss from 0.80 to 0.85 of the cap, still inside the
+hard cap, but raises static quota from 1.30 to 1.74 and exact blocking from 1.69 to
+1.76. A smaller request is cheaper and slips under a quota that refused the full
+fragment; a keyed account still charges it. Spreading attempts over forty tenants
+and three platforms changes nothing---identity is not the key.
 
 The availability gap is the price of soundness and it is not constant: 13.6 points
 at a cap of $0.5\eps$, 10.2 at $0.75\eps$, 4.4 at $1.0\eps$, 3.4 at $1.5\eps$, and
@@ -78,7 +83,7 @@ and that \sys\ achieves it, not that \sys\ dominates exact global on every axis.
 
 \begin{figure}[tb]
 \centering
-\includegraphics[width=\columnwidth]{figures/fig3_attack.png}
+\includegraphics[width=0.95\columnwidth]{figures/fig3_attack.png}
 \caption{Escape ratio under a splitting tenant (E4, three seeds). Policies
 without a subject key grow linearly in the number of fragments; subject-keyed
 policies are flat, and only those keep the ratio at or below one.}

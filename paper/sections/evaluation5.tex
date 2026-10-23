@@ -27,8 +27,7 @@ reserve-and-commit pairs per second at a median round trip of 201\,$\mu$s; four
 clients sustain 2.4k at 283\,$\mu$s with a p99 of 16\,ms. The server saturates,
 so the limit is the coordinator's interpreter rather than the transport: a
 deployment that needs more must shard subjects across coordinators and replicate
-them, which we have not built. The measurement bounds what a remote settlement
-costs---roughly a quarter of a millisecond per query, and no more.
+them, which we have not built. The bound is a quarter of a millisecond per query, and no more.
 
 Three caveats follow. The coordinator is one process, so the numbers bound the
 protocol rather than a deployment, and the cross-process test measures a loopback

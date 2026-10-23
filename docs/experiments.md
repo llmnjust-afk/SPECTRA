@@ -203,6 +203,28 @@ diagnostic, not a configuration we recommend.
 Latency from the queue model is queueing plus service for one coordinator thread.
 It excludes network, client time and any second server.
 
+## E18 — closed-loop attacker
+
+E4 and E15 attack with a fixed plan. A tenant that sees admission decisions can do
+better, so E18 hands the attacker the decision stream. Three strategies share one
+budget of 1,200 attempts, one target subject and a cap of one epsilon:
+
+* `round_robin` cycles forty tenants and three platforms (the open-loop baseline);
+* `probe` halves the fragment after a refusal, grows it by 10% after an admission,
+  and retires an identity after three consecutive refusals;
+* `cooling` always uses the identity that has been idle longest.
+
+The measured quantity is the composed loss actually charged, converted to epsilon at
+the run's delta and divided by the cap. Summing marginal epsilons would overstate the
+loss, since ten fragments of 0.3 eps compose to 0.80, not 3.0.
+
+Results: probing raises PrivFuse from 0.80 to 0.85 of the cap (the soft budget is
+0.8, the hard cap 1.0) but raises static quota from 1.30 to 1.74 and exact blocking
+from 1.69 to 1.76, because a cheaper request slips under a quota that refused the
+full fragment. `cooling` is indistinguishable from `round_robin` for every policy:
+dispersion across identities buys nothing when the identity is not the key. Runs are
+deterministic, so the three seeds coincide.
+
 ## Reading the numbers
 
 * Violation counts are the load-bearing result; wall-clock numbers are

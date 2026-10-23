@@ -5,8 +5,8 @@
 \label{sec:eval-method}
 
 We run on a two-vCPU container with 4\,GiB of RAM, CPython 3.11, and a single
-process. The host is deliberately small, which makes the absolute latencies a conservative
-upper bound.
+process. The host is deliberately small, so absolute latencies are a conservative upper
+bound.
 Experiments are repeated on three seeds and we report the mean, except the cap
 sweep, which the replication study reruns on twelve; per-seed rows
 are committed with the code.
@@ -82,7 +82,7 @@ locality; the estimate stays one-sided, with maximum absolute error 0.057$\eps$.
 
 \begin{figure}[tb]
 \centering
-\includegraphics[width=\columnwidth]{figures/fig7_scale.png}
+\includegraphics[width=0.94\columnwidth]{figures/fig7_scale.png}
 \caption{Accountant state and per-request cost as the subject population grows
 (E8). The exact accountant grows linearly with $N$; the sketch is flat in $N$
 and pays a modest per-key locality penalty. Zero under-estimates at every

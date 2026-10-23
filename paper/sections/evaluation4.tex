@@ -6,9 +6,8 @@ system admits 0.923 of requests at 4.77\,MB and 100.9\,$\mu$s per request; exact
 global admits 0.929 at 0.24\,MB and 10.8\,$\mu$s. Removing degradation, so that the
 breaker can only admit or refuse, costs 4.2 points of availability (0.881 against
 0.923): degradation converts would-be refusals into answers. Shrinking the sketch from $2^{14}$ to $2^{9}$ columns cuts memory from 4.77\,MB to
-0.71\,MB without moving availability, and widening it to $2^{16}$ raises memory to
-17.4\,MB without moving it either: on 1{,}500 subjects the hot table holds everyone
-who matters.
+0.71\,MB without moving availability, and widening it to $2^{16}$ only costs memory:
+on 1{,}500 subjects the hot table holds everyone who matters.
 
 Churn is the cost the capacity sweep hides (E14): rotating 400 new heavy subjects
 per epoch raises the mean over-estimate from 0.16 to 0.28 at a $0.15\eps$ cap and

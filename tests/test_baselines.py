@@ -75,3 +75,24 @@ def test_soft_budget_degrades_instead_of_refusing():
     policy.finish(third, 2.0)
     # two full charges plus one halved charge leave less than one more full headroom
     assert not policy.begin(_request(3, 3.0)).allowed
+
+
+def test_probing_attacker_cannot_push_privfuse_past_the_hard_cap(monkeypatch):
+    from privfuse.experiments import e18_adaptive_attack as e18
+
+    monkeypatch.setattr(e18, "ATTEMPTS", 400)
+    caps = {e18.SUBJECT: 1.0}
+    policy = e18._build("privfuse", caps)
+    row = e18._run_attack(policy, "probe", seed=0)
+    assert row["escape_ratio"] <= 1.0
+    assert row["refused"] > 0
+
+
+def test_a_baseline_without_a_subject_key_releases_more_than_the_cap(monkeypatch):
+    from privfuse.experiments import e18_adaptive_attack as e18
+
+    monkeypatch.setattr(e18, "ATTEMPTS", 400)
+    caps = {e18.SUBJECT: 1.0}
+    policy = e18._build("static_quota", caps)
+    row = e18._run_attack(policy, "probe", seed=0)
+    assert row["escape_ratio"] > 1.0

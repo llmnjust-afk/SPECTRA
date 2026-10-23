@@ -1,0 +1,29 @@
+{
+  "attempts": 1200,
+  "cap": 1.0,
+  "fragment": 0.3,
+  "platforms": [
+    "p0",
+    "p1",
+    "p2"
+  ],
+  "policies": [
+    "privfuse",
+    "exact_blocking",
+    "static_quota",
+    "token_bucket",
+    "audit_only",
+    "exact_global"
+  ],
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "strategies": [
+    "round_robin",
+    "probe",
+    "cooling"
+  ],
+  "tenants": 40
+}
