@@ -1,9 +1,9 @@
 \subsection{Ablation and Stability}
 \label{sec:eval-ablation}
 
-Removing one component at a time (three seeds, E7) gives the following. The full
-system admits 0.923 of requests at 4.77\,MB and 100.9\,$\mu$s per request; exact
-global admits 0.929 at 0.24\,MB and 10.8\,$\mu$s. Removing degradation, so that the
+Removing one component at a time (three seeds, E7): the full system admits 0.923 of
+requests at 4.77\,MB and 100.9\,$\mu$s; exact global admits 0.929 at 0.24\,MB and
+10.8\,$\mu$s. Removing degradation, so that the
 breaker can only admit or refuse, costs 4.2 points of availability (0.881 against
 0.923): degradation converts would-be refusals into answers. Shrinking the sketch from $2^{14}$ to $2^{9}$ columns cuts memory from 4.77\,MB to
 0.71\,MB without moving availability, and widening it to $2^{16}$ only costs memory:
@@ -13,8 +13,7 @@ Churn is the cost the capacity sweep hides (E14, Fig.~\ref{fig:slo}b): rotating 
 new heavy subjects per epoch raises the mean over-estimate from 0.16 to 0.28 at a
 $0.15\eps$ cap and from 0.25 to 0.65 at $1.0\eps$, and the p99 from 1.7$\times$ to
 5.1$\times$. Safety is untouched---zero violations in 30 runs---because an evicted
-subject is re-seeded from the sketch upper bound, but the table stops paying for
-itself, which bounds what it can buy against an adversary who chooses the traffic.
+subject is re-seeded from the sketch upper bound, but the table stops paying for itself.
 
 Disabling the table raises availability from 0.923 to 0.930 and lowers cost from 101
 to 80\,$\mu$s, but the breaker never flaps: the monitor samples its rate from the hot
@@ -22,20 +21,19 @@ table, so ablating the table silently ablates the monitor.
 
 
 
-The last row is the honest comparison, and it is less comfortable than it
-suggests. At 1{,}500 subjects exact cumulative accounting matches \sys's
-availability within a point ($0.898$ against $0.906$ at $1.0\eps$; $0.713$ against
-$0.721$ at $0.5\eps$) with 0.38\,MB against \sys's 5.05\,MB in the same 600\,s configuration. Its 19\,$\mu$s per request is not
-a like-for-like cost: it runs no breaker, coordinator or window. A windowed exact accountant is likewise implementable (E16, 600\,s window): at
-$0.5\eps$ it admits every request and still lets six of 1{,}500 subjects exceed their
-\emph{lifetime} cap, spending 1.08\,MB against \sys's 5.05\,MB. Windowed enforcement
-bounds a window, not a lifetime, and at $1.0\eps$ the two are within a point of
-availability ($1.000$ against $0.906$) with one lifetime violation. Putting the
+The last row is less comfortable than it suggests. At 1{,}500 subjects exact
+cumulative accounting matches \sys's availability within a point ($0.898$ against
+$0.906$ at $1.0\eps$) with 0.38\,MB against 5.05\,MB in the same 600\,s configuration;
+its 19\,$\mu$s runs no breaker, coordinator or window. A windowed exact accountant (E16)
+admits every request at $0.5\eps$ and still lets six of 1{,}500 subjects exceed their
+\emph{lifetime} cap, spending 1.08\,MB: a window is not a lifetime, and at $1.0\eps$ it
+reaches 1.000 against 0.906 with one lifetime violation. Putting the
 exact table behind the same ring, breaker and coordinator isolates approximation
 from functionality (E20): availability and windowed peak are equal at
-both caps, the exact version is 1.5$\times$ faster on average (233 against
-156\,$\mu$s, 1.3--2.4 across runs) and uses 0.37\,MB against 5.01\,MB. At $10^{3}$ subjects the sketch
-buys nothing but the slope; that slope reaches 246\,MB at $10^{6}$.
+both caps, the exact version is 1.5$\times$ faster (233 against 156\,$\mu$s) and uses
+0.37\,MB against 5.01\,MB. At $10^{3}$ subjects the sketch
+buys nothing but the slope; measured from $10^{3}$ to $10^{6}$, that slope ends at
+553\,MB resident against 5.8\,MB, a sketch footprint that does not move (E23).
 
 On a load oscillating around the threshold, hysteresis and dwell give the breaker
 zero transitions; without them, 26, of which 13 are reversals.

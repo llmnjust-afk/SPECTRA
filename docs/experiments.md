@@ -266,9 +266,9 @@ both have zero hard-cap violations. The exact version is 1.5x faster on average
 5.01 MB.
 
 The result is deliberately unflattering and bounds the claim: at 10^3 subjects the
-sketch buys nothing but the slope. That slope is the point. The dense table grows
-at roughly 250 bytes per subject, which is 246 MB at 10^6 subjects, while the
-sketch stays at 5 MB; E8 measures the flat curve. An equi-functional exact design
+sketch buys nothing but the slope. That slope is the point, and E23 measures it
+rather than extrapolating it: 553 MB resident at 10^6 subjects against 5.8 MB for
+the sketch, whose footprint does not move across four orders of magnitude. An equi-functional exact design
 is therefore the right choice below the crossover and the wrong one above it, and
 the paper should be read as locating that crossover rather than as claiming
 approximation is free.
@@ -339,6 +339,37 @@ replication, no network partition. The honest comparison for throughput is E13b
 (1.9k pairs/s), which runs an in-memory ledger and no answer-log fsync; the
 difference is the price of durability, not of distribution.
 
+## E23 — the dense table at four populations
+
+E20's exact control holds one table per live epoch, so its per-subject cost is the
+number the crossover argument depends on. `e23_population` measures it at 10^3,
+10^4, 10^5 and 10^6 subjects, each (backend, population) pair in its own process so
+the resident set is not contaminated by an earlier run. The traffic shape is E8's:
+1000 hot subjects with eight requests each, every other subject once.
+
+| backend | subjects | nbytes | resident | us/request |
+|---|---|---|---|---|
+| sketch | 10^3 | 2.77 MB | 5.53 MB | 32.0 |
+| sketch | 10^4 | 2.79 MB | 5.75 MB | 54.9 |
+| sketch | 10^5 | 2.79 MB | 5.88 MB | 54.0 |
+| sketch | 10^6 | 2.79 MB | 5.75 MB | 45.7 |
+| exact | 10^3 | 0.26 MB | 1.05 MB | 6.6 |
+| exact | 10^4 | 2.56 MB | 5.81 MB | 8.3 |
+| exact | 10^5 | 25.6 MB | 58.4 MB | 10.8 |
+| exact | 10^6 | 256.0 MB | 552.6 MB | 14.5 |
+
+Two things worth stating in the paper and one that is not.
+
+1. The sketch is flat: 5.5-5.9 MB at every population. This is the claim the paper
+   makes, now measured at 10^6 rather than inferred from 1,500.
+2. The exact store's own `nbytes` understates what it occupies by 2.2x, because it
+   reports `128 * len(costs)` and ignores the dict, the key strings and the
+   `CostVector` objects. The paper quotes the resident number for the slope and the
+   `nbytes` number for the 1,500-subject comparison, and says which is which.
+3. Per-request cost also rises, 6.6 to 14.5 us, as the dict outgrows cache; that is
+   a secondary effect and the paper only mentions it in passing.
+
+`results/e23_population.csv` holds the rows.
 ## Reading the numbers
 
 * Violation counts are the load-bearing result; wall-clock numbers are

@@ -1,0 +1,15 @@
+{
+  "depth": 4,
+  "epoch_seconds": 300.0,
+  "hot_requests": 8,
+  "hot_subjects": 1000,
+  "note": "nbytes is the implementation's estimate; rss is measured by the OS",
+  "populations": [
+    1000,
+    10000,
+    100000,
+    1000000
+  ],
+  "ring_size": 8,
+  "width": 16384
+}
