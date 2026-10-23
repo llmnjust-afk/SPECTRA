@@ -12,7 +12,7 @@ Hyperledger Fabric adapter that raises \texttt{NotImplementedError}; the
 coordinator's safety argument does not depend on the backend, which sees only
 reserve, commit and release, but we do not measure Fabric latency, so our numbers bound
 the protocol rather than the settlement path. The attester is null: verifying that a platform ran the mechanism it charged for
-needs remote attestation or verifiable computation. On restart the committed charges are replayed into the estimator before the
-coordinator admits anything (E21), so the windowed view returns with the log rather
-than empty. Every run is seeded and writes raw rows, so one command regenerates every
+needs remote attestation or verifiable computation. On restart the 391 committed charges of E21 are replayed into the estimator before
+the coordinator admits anything, every estimate at or above committed spend, so the
+windowed view returns with the log rather than empty. Every run is seeded and writes raw rows, so one command regenerates every
 table and figure; an anonymized artifact accompanies the submission.
