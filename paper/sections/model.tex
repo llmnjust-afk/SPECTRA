@@ -53,7 +53,13 @@ cumulative vector charged to $s$ and
 for the spend inside a window of length $W$. The hard cap is scalar: a cumulative
 vector $c$ is within budget when $g(c)\le E_s$, where
 $g(c)=\eps_{\mathrm{pure}}+\rho+2\sqrt{\rho\ln(1/\delta)}$ converts a pure-DP
-part and a zCDP part to $\eps$ at the market's $\delta$. The SLO constrains the
+part and a zCDP part to $\eps$ at the market's $\delta$. Both mechanisms we price
+carry $\delta{=}0$ in the vector---Laplace is pure, Gaussian is zCDP---so the
+conversion consumes $\delta$ once rather than once per query. The test must be on
+$g$, not on the two components: at a $1.0\eps$ cap, admitting while
+$\eps_{\mathrm{pure}}\le1$ and $\rho\le0.021$ separately lets a mixed stream reach
+a converted $1.41\eps$, whereas the scalar test rejects the 13 queries that cause it
+(E24). The SLO constrains the
 windowed spend under the same scalarisation.
 
 \subsection{The Enforcement Problem}

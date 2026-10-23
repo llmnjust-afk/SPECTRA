@@ -1,9 +1,10 @@
 {
   "depth": 4,
   "epoch_seconds": 300.0,
+  "epochs": 3,
   "hot_requests": 8,
   "hot_subjects": 1000,
-  "note": "nbytes is the implementation's estimate; rss is measured by the OS",
+  "note": "nbytes is the implementation's estimate; rss is measured by the OS; epochs=3 matches the paper's default 600 s window over 300 s epochs",
   "populations": [
     1000,
     10000,

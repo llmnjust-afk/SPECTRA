@@ -158,28 +158,33 @@ def fig_hysteresis() -> pathlib.Path | None:
 
 
 def fig_e8() -> pathlib.Path | None:
-    frame = _load("e8_scale")
+    frame = _load("e23_population")
     if frame is None:
         return None
     fig, ax = plt.subplots(1, 1, figsize=(3.4, 1.85))
     exact = frame[frame["backend"] == "exact"]
+    sketch = frame[frame["backend"] == "sketch"]
     ax.plot(
-        exact["subjects"], exact["bytes"] / 1e6, marker="o", markersize=3, linewidth=1.0, label="exact"
+        exact["subjects"],
+        exact["rss_delta"] / 1e6,
+        marker="o",
+        markersize=3,
+        linewidth=1.0,
+        label="dense exact table",
     )
-    for width, group in frame[frame["backend"] == "sketch"].groupby("width"):
-        ax.plot(
-            group["subjects"],
-            group["bytes"] / 1e6,
-            marker="s",
-            linestyle="--",
-            label=f"sketch w={width}",
-            markersize=3,
-            linewidth=1.0,
-        )
+    ax.plot(
+        sketch["subjects"],
+        sketch["rss_delta"] / 1e6,
+        marker="s",
+        linestyle="--",
+        markersize=3,
+        linewidth=1.0,
+        label="PrivFuse sketch",
+    )
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_xlabel("subjects")
-    ax.set_ylabel("peak memory (MB)")
+    ax.set_ylabel("resident memory (MB)")
     ax.legend(frameon=False)
     return _save(fig, "fig7_scale")
 

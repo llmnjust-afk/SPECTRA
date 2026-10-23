@@ -34,14 +34,9 @@ because the mechanism executed is the one charged for.
 \subsection{Two-Phase Settlement}
 \label{sec:design-settle}
 
-Reservation is all-or-nothing over the query's subject set. Under a guard covering
-exactly the stripes of those subjects, the coordinator reads
-$\mathrm{remaining}(s)=E_s-(\text{committed}(s)+\text{in-flight}(s))$ for every
-$s$ in the support and rejects if any subject lacks room; otherwise it records a
-reservation with a time-to-live. Check and record share the guard, so no other
-transaction observes the budget between them, and a rejection is not a partial
-charge: either the query is reserved against every subject it touches, or it
-touches no budget at all.
+Reservation is all-or-nothing over the query's subject set, and a rejection is
+not a partial charge: either the query is reserved against every subject it
+touches, or it touches no budget at all (Algorithm~\ref{alg:settle}).
 
 Commit is idempotent in the transaction identifier. A repeated commit for an
 already-committed transaction increments a duplicate counter and returns the
@@ -53,10 +48,36 @@ hostage to one TTL; the cost is a window in which budget is unavailable although
 no answer was delivered, so the TTL trades availability under crash against
 availability under load.
 
+\begin{algorithm}[tb]
+\caption{Settlement. The log append is the commit point: durable before the state
+changes and before any answer leaves. States: \textsc{Reserved}$\to$\textsc{Committed}
+(deliver), \textsc{Reserved}$\to$\textsc{Released} (abort or TTL); committed is
+terminal and a repeated commit is a no-op.}
+\label{alg:settle}
+\footnotesize
+\begin{algorithmic}[1]
+\Procedure{Reserve}{$tx, S, c$}
+  \State lock stripes of $S$ in sorted order; $st \gets \Call{State}{tx}$
+  \If{$st = \textsc{Committed}$} \State unlock; \Return \textsc{Deliver} \EndIf
+  \If{$st = \textsc{Reserved}$} \State unlock; \Return \textsc{Execute} \EndIf
+  \If{$\exists s\in S:\ g(\mathrm{spend}(s)+\mathrm{inflight}(s)+c_s) > E_s$}
+    \State unlock; \Return \textsc{Refuse}
+  \EndIf
+  \State $\Call{Append}{\textsc{Reserved}, tx, S, c}$; \Call{Fsync}{}
+  \State $\mathrm{inflight}(s)\mathrel{+}=c_s$ for $s\in S$; $\Call{SetState}{tx,\textsc{Reserved}}$; unlock
+\EndProcedure
+\Procedure{Commit}{$tx$}
+  \State lock; \If{$\Call{State}{tx} \ne \textsc{Reserved}$} unlock; \Return \EndIf
+  \State $\Call{Append}{\textsc{Committed}, tx}$; \Call{Fsync}{}
+  \State $\mathrm{spend}(s)\mathrel{+}=c_s$; $\mathrm{inflight}(s)\mathrel{-}=c_s$; $\Call{Observe}{s,c_s}$
+  \State unlock; \Return \textsc{Deliver}
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
 Concurrency is handled by striping. Subjects map to $L=64$ stripes by a hash of
-the identifier, and a transaction acquires its subjects' stripes in sorted index
-order, which rules out deadlock and lets transactions over disjoint subjects
-proceed in parallel. A transaction spanning many subjects serialises against everything sharing its
+the identifier, and a transaction acquires its stripes in sorted index order,
+ruling out deadlock; transactions over disjoint subjects then proceed in parallel. A transaction spanning many subjects serialises against everything sharing its
 stripes, which is correct for a multi-subject query and is why striped and global
 locking behave alike when all traffic hits one subject. The difference appears
 when subjects are disjoint, and Section~\ref{sec:eval-concurrency} measures

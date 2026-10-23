@@ -239,44 +239,60 @@ exact blocking 从 1.69 抬到 1.76——因为更小的请求更便宜，能从
 合成人群为主，缺少真实 trace 与与已发表系统的端到端对比。这两点无法靠
 改写解决，只能靠新的实现与测量，已在限制一节如实交代。
 
-## I. 10⁶ 主体：把外推换成实测（P1-1）
+## J. 低成本收口：五项（回应 P0-2 / P0-3 / P1-2 / P1-1 / P2-7 / P2-10）
 
-原文写的是 "that slope reaches 246 MB at 10⁶"，来源是用 1,500 主体的 0.37 MB
-线性外推。E8 其实早就在 10⁶ 上量过（dense accountant 264.6 MB tracemalloc），
-但那是 `ExactAccountant`，不是 E20 的 `ExactCostSketch`，混用会产生"同一句话
-两个实现"的问题。所以新做 E23。
+### J1. 内存口径统一（P2-7）
 
-### I1. 方法
+原文有 4.7 / 4.70 / 4.77 / 5.05 / 6.27 / 265 MB 六个数并列，读者无法判断差异
+来自宽度、epoch 数还是计量方式。现在：
 
-`e23_population`：对 {sketch, exact} × {10³, 10⁴, 10⁵, 10⁶} 八个组合，每个组合
-独立子进程（避免上一个组合的 RSS 污染），固定 now=0 使只有一个 epoch，流量形状
-沿用 E8（1000 个热主体各 8 次，其余每主体 1 次）。同时记录：
-- `nbytes`：实现自报（exact 为 `128*len(costs)`）；
-- `rss`：/proc/self/statm 实测；
-- 每请求耗时与最大相对误差。
+- 10⁶ 的比较统一用**常驻内存 + 默认 ring（4 张活跃表）**：sketch 10.6 MB，
+  dense 表 1.2 GB（E23，四个数量级实测，图 2 直接画这两个序列）；
+- 1,500 主体的比较仍用 `nbytes`，并逐处标注 "accounted"；
+- 摘要、引言、§IV-C、结论、§VII-C 全部换成同一组数（10.6 MB vs 1.2 GB）；
+- 删掉了 264.6 MB 那一句（E8 的 traced peak，与 resident 不同量）。
 
-### I2. 结果
+E23 同时暴露一个实现问题：`ExactCostSketch.nbytes()` 报 128 B/主体，真实常驻是
+2.3 倍（dict、key 字符串、CostVector 对象没算）。论文没有改 `nbytes()`（它仍是
+"结构分配量"的诚实定义），而是明确区分两种口径。
 
-| backend | subjects | nbytes | RSS | µs/req |
+### J2. 混合机制预算域（P0-2）
+
+新增 E24 与 `tests/test_budget_domain.py`（3 个测试，套件 48→51）。同一串 40 个
+Laplace/Gaussian 查询：
+
+| cap | scalar 准入 | scalar 实际 eps | component 准入 | component 实际 eps |
 |---|---|---|---|---|
-| sketch | 10³ | 2.77 MB | 5.53 MB | 32.0 |
-| sketch | 10⁶ | 2.79 MB | 5.75 MB | 45.7 |
-| exact | 10³ | 0.26 MB | 1.05 MB | 6.6 |
-| exact | 10⁶ | 256.0 MB | 552.6 MB | 14.5 |
+| 0.5 | 12 | 0.98 | 30 | 1.81 |
+| 1.0 | 27 | 0.99 | 40 | 1.41 |
 
-三点：
-1. sketch 在四个数量级上完全平（5.5–5.9 MB），这是论文的核心声明，现在是在
-   10⁶ 上实测的，不是从 1,500 推的。
-2. exact 的 `nbytes` 低估真实占用 2.2 倍：它只算 128 B/主体，漏了 dict、key
-   字符串和 `CostVector` 对象。论文对斜率用 RSS（553 MB），对 1,500 主体那一句
-   仍用 nbytes（0.37 MB），并在措辞上区分了这两个量——这是本轮唯一"数字没变但
-   含义变了"的地方。
-3. 每请求成本随主体数从 6.6 升到 14.5 µs（dict 超出 cache），次要效应，论文只在
-   斜率句里隐含。
+component 两条件各自成立，组合后仍超限——审稿人指出的正是这个。纯 Laplace 或纯
+Gaussian 时两者完全一致，所以这个错误只在混合时出现，也解释了为什么它容易被漏掉。
+论文在 §III-B 的 g(c) 之后加了三句，并把 δ 的角色写死：两种机制向量的 δ 都是 0，
+换算只消费一次市场 δ。
 
-### I3. 代价与边界
+### J3. 相关工作（P1-2）
 
-- 8 个组合合计约 90 秒、峰值 RSS 约 600 MB，远低于 4 GiB 上限。
-- 只测内存/延迟，不测可用性：10⁶ 主体的端到端可用性仍来自 E8 的估计误差曲线，
-  不是同一实验；论文没有把 E23 说成端到端 10⁶ 实验。
-- 10⁶ 时 hot table 的覆盖问题（H=1024 对 10⁶）是 E8/E14 的已知弱点，E23 不改变它。
+补 PrivateKube（OSDI'21）与 DProvDB（PACMMOD 2024），与已引的 Cohere 合并成一句
+对比：三者都把预算键在分析员/应用/数据块上，都在单一部署内执行。DProvDB 的条目
+经 CrossRef 校正（vol. 1, no. 4, pp. 1–27, DOI 10.1145/3626761）；PrivateKube 的
+OpenAlex 查询返回 429，条目保持 arXiv 版本信息，投稿前应再跑一次 ref_verify。
+
+### J4. 伪代码与状态机（P1-1）
+
+新增 Algorithm 1（§IV-E）：Reserve 的锁、状态幂等、g 判定、WAL 追加 + fsync、
+inflight 更新；Commit 的日志 → 状态 → 估算器顺序。caption 给出状态机
+（RESERVED→COMMITTED/RELEASED，COMMITTED 终态，重复 commit 是 no-op）与提交点
+定义。为腾出版面，§IV-E 的散文压缩了同义内容，估计算法本身占用约 15 行。
+
+### J5. best-effort 措辞（P0-3 / P2-10）
+
+§IV-C 现在区分三层：真实 SLO（全体主体）、监测代理（hot table）、breaker 的控制
+目标，并写明"a subject outside it can still violate"。论文没有再声称
+"enforcing the population SLO"。
+
+### J6. 代价
+
+11 页仍守住：为此压缩了 RDP 段、结论、相关工作、队列段、可用性段、churn 段，
+并把浮动体间距从 IEEEtran 默认收紧到 10/9 pt。正文净减约 350 词，新增算法 15 行、
+E24 三句、相关工作两句。当前 35 条引用（35=35），0 错误、0 Overfull。

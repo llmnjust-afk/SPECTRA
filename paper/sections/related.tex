@@ -19,13 +19,14 @@ Flex turn it into a deployed SQL system with elastic sensitivity and per-query
 pricing~\cite{johnson2018towards}, and production libraries apply the same
 accountant to training~\cite{yousefpour2021opacus,abadi2016deep}. All three fix the accounting unit to the analyst and settle inside one
 administrative domain. Cohere tracks DP budgets for large-scale analytics pipelines at block
-granularity~\cite{kchler2024cohere}, so the budget follows the partition a query
-reads and enforcement stays inside one deployment. Prochlo moves enforcement into an enclave
-and removes the trusted server, at the price of fixing the unit to the user and the
-granularity to a batch~\cite{bittau2017prochlo}, a model now studied formally as
-anonymous shuffling~\cite{cheu2019distributed}; IncShrink combines MPC with DP so
-that an outsourced database never sees plaintext, at the price of a cryptographic
-protocol per query~\cite{wang2022incshrink}. None of them charges a \emph{subject}
+granularity~\cite{kchler2024cohere}; PrivateKube schedules one budget across
+competing tenants~\cite{luo2021privacy} and DProvDB tracks provenance across
+colluding analysts~\cite{zhang2023dprovdb}. All three key the budget to an analyst,
+an application or a block inside one deployment, so none charges a subject whose
+records sit on several platforms. Prochlo moves enforcement into an enclave and removes the trusted server, fixing the
+unit to the user and the granularity to a batch~\cite{bittau2017prochlo}, a model now
+studied formally as anonymous shuffling~\cite{cheu2019distributed}; IncShrink
+combines MPC with DP at a cryptographic protocol per query~\cite{wang2022incshrink}. None of them charges a \emph{subject}
 whose records sit on several platforms, and none treats the resulting counter as a
 transaction.
 

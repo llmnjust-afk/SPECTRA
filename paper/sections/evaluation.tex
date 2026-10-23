@@ -33,11 +33,10 @@ its estimator.
 \label{sec:eval-accuracy}
 
 Approximation must never produce a false negative: one at admission is a cap
-violation. Across 24
-configurations---four widths, with and without the hot table, three seeds---we
-observe \emph{zero} false negatives. The property is not statistical: it follows from
-Proposition~\ref{prop:onesided}, and the experiment confirms that the implementation
-respects it, including across eviction and re-admission.
+violation. Across 24 configurations---four widths, with and without the hot table,
+three seeds---we observe \emph{zero} false negatives. The property is not
+statistical: it follows from Proposition~\ref{prop:onesided}, and the experiment
+confirms the implementation respects it across eviction and re-admission.
 
 Accuracy separates along the population. For the top percentile of subjects by
 spend---the ones whose budgets bind---relative error is 4.3\% without a hot table
@@ -60,34 +59,33 @@ to the controller and 7\% to the accountant, and the tail is a single function, 
 tenant-pressure sweep that scans the hot table every 64 admissions. Disabling it
 buys back half the mean and almost all of the tail.
 
-Queueing over those service times decides the deployment (Fig.~\ref{fig:latency}b):
-at 50\% utilisation the median is 0.17\,ms but the p99 is 107\,ms, because one
-5.6\,ms event stalls everything behind it, and a load that averages 50\% while
-peaking at five times capacity makes the median 0.93\,s. The path must be
-provisioned for its peak, not its mean.
+Queueing decides the deployment (Fig.~\ref{fig:latency}b): at 50\% utilisation the
+median is 0.17\,ms but the p99 is 107\,ms, because one 5.6\,ms event stalls
+everything behind it; a load that averages 50\% while peaking at five times capacity
+makes the median 0.93\,s. The path must be provisioned for its peak.
 
-Memory tells the opposite story at small scale: at $5{,}000$ subjects the sketch
-occupies 5.57\,MB where the exact table needs 1.28\,MB, so the sketch is 4.3 times
-\emph{larger} and the crossover is near $2\times10^{4}$ subjects.
-Figure~\ref{fig:scale} measures the regime that matters: from $10^{3}$ to $10^{6}$
-subjects the exact accountant grows from 1.1\,MB to 264.6\,MB while the sketch stays
-at 4.70\,MB (width $2^{12}$) and 6.27\,MB (width $2^{14}$), a factor of 42 to 56 at
-$10^{6}$ that widens linearly. Per-request cost grows from 14\,$\mu$s to
-27\,$\mu$s, because a larger key space means more hot-table entries and worse
-locality; the estimate stays one-sided, with maximum absolute error 0.057$\eps$.
+Memory tells the opposite story at small scale: below roughly $10^{4}$ subjects a
+dense table is no larger than the sketch, because the sketch's width is paid once
+and the table's cost has not caught up.
+Figure~\ref{fig:scale} measures the regime that matters, with the default ring
+(four live tables) and resident memory: from $10^{3}$ to $10^{6}$ subjects the dense
+table grows from 1.2\,MB to 1.2\,GB while the sketch stays at 10.6\,MB (E23).
+Per-request cost rises more gently, from 25 to 45\,$\mu$s for the sketch and 9 to
+13\,$\mu$s for the table; the estimate stays one-sided, with maximum absolute error
+0.057$\eps$ (E8).
 
 \begin{figure}[tb]
 \centering
-\includegraphics[width=\columnwidth]{figures/fig7_scale.png}
-\caption{Accountant state as the subject population grows (E8). The exact
-accountant grows linearly with $N$; the sketch is flat in $N$ and pays a modest
-per-key locality penalty. Zero under-estimates at every population.}
+\includegraphics[width=0.88\columnwidth]{figures/fig7_scale.png}
+\caption{Resident memory as the subject population grows (E23), with the default
+four live tables. The dense table grows linearly with $N$; the sketch is flat. Zero
+under-estimates at every population.}
 \label{fig:scale}
 \end{figure}
 
 \begin{figure}[tb]
 \centering
-\includegraphics[width=\columnwidth]{figures/fig17_latency.png}
+\includegraphics[width=0.9\columnwidth]{figures/fig17_latency.png}
 \caption{Admission latency (E17, 12{,}000 requests, median of three trials). (a)
 Service time with and without the tenant-pressure sweep, log scale; the sweep is a
 diagnostic, not an option. (b) FCFS queue over the measured service times under
@@ -96,9 +94,8 @@ Poisson arrivals and under a burst at five times the average rate.}
 \end{figure}
 
 
-This shows that the structure answering windowed queries has memory independent
-of $N$, and that a naive windowed accountant---one cumulative structure per
-epoch---would multiply the measured 264.6\,MB by the ring depth. It does not show
-that the whole system is $O(1)$ in $N$: the ledger keeps one scalar balance per
-subject that has ever transacted, which settlement requires, is far smaller per
-subject than a cost vector, and would be sharded in a deployment.
+The structure answering windowed queries is therefore $O(1)$ in $N$, whereas a
+naive windowed accountant---one cumulative structure per epoch---multiplies the
+measured 1.2\,GB by the ring depth. The whole system is not: the ledger keeps one
+scalar balance per subject that has ever transacted, far smaller than a cost vector,
+and a deployment would shard it.

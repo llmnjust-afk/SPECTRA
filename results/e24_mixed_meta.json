@@ -1,0 +1,12 @@
+{
+  "caps": [
+    0.5,
+    1.0,
+    2.0
+  ],
+  "delta": 1e-05,
+  "gaussian_eps": 0.09,
+  "laplace_eps": 0.05,
+  "note": "component tests eps_pure<=cap and rho<=rho_max(cap) separately",
+  "offered": 40
+}

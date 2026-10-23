@@ -27,6 +27,7 @@ from privfuse.experiments.common import write_csv, write_json
 from privfuse.trace.generator import EPS_DELTA
 
 POPULATIONS = (1_000, 10_000, 100_000, 1_000_000)
+EPOCHS = 3
 HOT = 1_000
 HOT_REQUESTS = 8
 COLD = gaussian_cost(0.002, EPS_DELTA, 1.0)
@@ -40,7 +41,7 @@ def _rss_bytes() -> int:
     return pages * 4096
 
 
-def _measure(backend: str, n_subjects: int, out: Any) -> None:
+def _measure(backend: str, n_subjects: int, epochs: int, out: Any) -> None:
     gc.collect()
     baseline = _rss_bytes()
     config = OnlineAccountantConfig(
@@ -54,12 +55,14 @@ def _measure(backend: str, n_subjects: int, out: Any) -> None:
     accountant = OnlineAccountant(config)
     hot = min(HOT, n_subjects)
     started = time.perf_counter()
-    for index in range(n_subjects):
-        accountant.observe(f"s{index:07d}", COLD, now=0.0)
-    for index in range(hot):
-        subject = f"s{index:07d}"
-        for _ in range(HOT_REQUESTS):
-            accountant.observe(subject, COLD, now=0.0)
+    for epoch in range(epochs):
+        now = float(epoch) * 300.0
+        for index in range(n_subjects):
+            accountant.observe(f"s{index:07d}", COLD, now=now)
+        for index in range(hot):
+            subject = f"s{index:07d}"
+            for _ in range(HOT_REQUESTS):
+                accountant.observe(subject, COLD, now=now)
     elapsed = time.perf_counter() - started
     gc.collect()
     after = _rss_bytes()
@@ -67,12 +70,14 @@ def _measure(backend: str, n_subjects: int, out: Any) -> None:
         {
             "backend": backend,
             "subjects": float(n_subjects),
-            "requests": float(n_subjects + hot * HOT_REQUESTS),
+            "requests": float(epochs * (n_subjects + hot * HOT_REQUESTS)),
+            "epochs": float(epochs),
+            "tables": float(epochs + 1),
             "nbytes": float(accountant.nbytes()),
             "rss_delta": float(after - baseline),
             "bytes_per_subject_nbytes": accountant.nbytes() / n_subjects,
             "bytes_per_subject_rss": (after - baseline) / n_subjects,
-            "us_per_request": elapsed / (n_subjects + hot * HOT_REQUESTS) * 1e6,
+            "us_per_request": elapsed / (epochs * (n_subjects + hot * HOT_REQUESTS)) * 1e6,
             "underestimated": 0.0,
             "max_relative_error": float(
                 max(
@@ -93,7 +98,7 @@ def run() -> list[dict[str, Any]]:
     for backend in ("sketch", "exact"):
         for population in POPULATIONS:
             out: Any = CTX.Queue()
-            process = CTX.Process(target=_measure, args=(backend, population, out))
+            process = CTX.Process(target=_measure, args=(backend, population, EPOCHS, out))
             process.start()
             row = out.get(timeout=1800)
             process.join(timeout=60)
@@ -102,7 +107,7 @@ def run() -> list[dict[str, Any]]:
                 f"{backend:>6} n={population:>8} "
                 f"nbytes={row['nbytes'] / 1e6:7.2f}MB "
                 f"rss={row['rss_delta'] / 1e6:7.2f}MB "
-                f"{row['us_per_request']:6.2f}us",
+                f"{row['us_per_request']:6.2f}us tables={int(row['tables'])}",
                 flush=True,
             )
     write_csv("e23_population", rows)
@@ -110,13 +115,15 @@ def run() -> list[dict[str, Any]]:
         "e23_population_meta",
         {
             "populations": list(POPULATIONS),
+            "epochs": EPOCHS,
             "hot_subjects": HOT,
             "hot_requests": HOT_REQUESTS,
             "epoch_seconds": 300.0,
             "ring_size": 8,
             "width": 1 << 14,
             "depth": 4,
-            "note": "nbytes is the implementation's estimate; rss is measured by the OS",
+            "note": "nbytes is the implementation's estimate; rss is measured by the OS; "
+            "epochs=3 matches the paper's default 600 s window over 300 s epochs",
         },
     )
     return rows

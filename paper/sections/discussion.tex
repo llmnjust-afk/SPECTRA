@@ -4,8 +4,7 @@
 Three principles transfer. Split the accounting state by the question it answers:
 exact where the quantity is money and must be settled, one-sided where it has time
 structure and must be cheap. Key every charge on the party that bears the loss, not
-the one who pays. Treat the charge as a transaction with a commit point, or it will
-eventually be incremented twice or not at all.
+the one who pays. Treat the charge as a transaction with a commit point.
 
 A deployment would replicate the coordinator over consensus nodes, own each subject
 on one node so the critical section stays local, and shard by subject range; E22 takes
@@ -14,11 +13,11 @@ subject's budget lives on one node, which could under-report a charge, and recei
 make it detectable only afterwards. Closing it needs Byzantine agreement or a proof
 that the charge matches the mechanism executed.
 
-The accounting layer is itself sensitive: the ledger records which subjects appear in
-which queries, and the hot table is close to a list of the most-queried subjects, so a
-reader learns participation patterns without learning any answer. Accumulators,
-oblivious access or an enclave for the hot table each cost something the design does
-not budget for; this is the most important open problem here.
+The accounting layer is itself sensitive: the ledger records which subjects appear
+in which queries, and the hot table is close to a list of the most-queried subjects,
+so a reader learns participation patterns without learning any answer. Accumulators,
+oblivious access or an enclave each cost something the design does not budget for;
+this is the most important open problem here.
 
 Three further limitations bound the claims. The SLO monitor samples the hot table,
 so its coverage depends on the hot capacity, and sampling the epoch ring directly is
@@ -29,8 +28,8 @@ hot table is measured in E14: it costs accuracy and availability, never soundnes
 
 Two conditions would falsify the approach. If a population is small and its policy
 cumulative, exact counting is cheaper, as our ablation shows at $1{,}500$ subjects;
-with one platform, a per-platform quota is already a per-subject quota and is sound. And if a query's cost cannot
-be predicted before execution, admission must price conservatively or fall back to
-post-hoc charging, weakening the guarantee to the one auditing provides. The design is
-for what remains: many subjects, several platforms, many tenants, and a promise that
-holds before the answer leaves the building.
+with one platform, a subject-keyed quota is sound but a tenant-keyed one is not. And if
+a query's cost cannot be predicted before execution, admission must price
+conservatively or fall back to post-hoc charging, weakening the guarantee to the one
+auditing provides. The design is for what remains: many subjects, several platforms,
+many tenants, and a promise that holds before the answer leaves the building.

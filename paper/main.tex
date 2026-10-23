@@ -10,6 +10,8 @@
 \usepackage{url}
 \usepackage{placeins}
 \usepackage{balance}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 
 \newcommand{\sys}{PrivFuse}
 \newcommand{\eps}{\varepsilon}
@@ -17,6 +19,9 @@
 \newcommand{\spend}{\sigma}
 
 \newtheorem{proposition}{Proposition}
+\setlength{\textfloatsep}{10pt plus 2pt minus 2pt}
+\setlength{\floatsep}{9pt plus 2pt minus 2pt}
+\setlength{\intextsep}{9pt plus 2pt minus 2pt}
 
 \begin{document}
 
@@ -48,8 +53,7 @@ subject-striped coordinator that charges each admitted query once even when
 clients retry, a platform dies mid-query, or the coordinator restarts behind a durable log. Third, windowed SLOs with a
 hysteretic breaker turn a cumulative bound into predictable degradation. On
 synthetic populations of up to $10^6$ subjects, \sys\ bounds estimator memory at
-4.7\,MB where exact
-accounting needs 265\,MB, admits 0.93 of requests at a cap of $\eps{=}1.0$ with
+10.6\,MB of resident memory where dense exact accounting needs 1.2\,GB, admits 0.93 of requests at a cap of $\eps{=}1.0$ with
 zero violations where exact per-platform blocking admits 0.98 with 12.7
 violations on average, and holds the escape ratio at 0.82 while audit-only policies reach
 2.43.

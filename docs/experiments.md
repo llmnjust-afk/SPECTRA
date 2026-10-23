@@ -343,33 +343,55 @@ difference is the price of durability, not of distribution.
 
 E20's exact control holds one table per live epoch, so its per-subject cost is the
 number the crossover argument depends on. `e23_population` measures it at 10^3,
-10^4, 10^5 and 10^6 subjects, each (backend, population) pair in its own process so
+10^4, 10^5 and 10^6 subjects with the paper's default ring (600 s window over 300 s
+epochs, so four live tables), each (backend, population) pair in its own process so
 the resident set is not contaminated by an earlier run. The traffic shape is E8's:
-1000 hot subjects with eight requests each, every other subject once.
+1000 hot subjects with eight requests each per epoch, every other subject once.
 
 | backend | subjects | nbytes | resident | us/request |
 |---|---|---|---|---|
-| sketch | 10^3 | 2.77 MB | 5.53 MB | 32.0 |
-| sketch | 10^4 | 2.79 MB | 5.75 MB | 54.9 |
-| sketch | 10^5 | 2.79 MB | 5.88 MB | 54.0 |
-| sketch | 10^6 | 2.79 MB | 5.75 MB | 45.7 |
-| exact | 10^3 | 0.26 MB | 1.05 MB | 6.6 |
-| exact | 10^4 | 2.56 MB | 5.81 MB | 8.3 |
-| exact | 10^5 | 25.6 MB | 58.4 MB | 10.8 |
-| exact | 10^6 | 256.0 MB | 552.6 MB | 14.5 |
+| sketch | 10^3 | 5.54 MB | 13.5 MB | 24.8 |
+| sketch | 10^4 | 5.57 MB | 10.5 MB | 36.2 |
+| sketch | 10^5 | 5.57 MB | 10.7 MB | 43.1 |
+| sketch | 10^6 | 5.57 MB | 10.6 MB | 44.7 |
+| exact | 10^3 | 0.51 MB | 1.2 MB | 8.7 |
+| exact | 10^4 | 5.12 MB | 11.6 MB | 6.9 |
+| exact | 10^5 | 51.2 MB | 122.9 MB | 10.5 |
+| exact | 10^6 | 512.0 MB | 1198.1 MB | 13.2 |
 
-Two things worth stating in the paper and one that is not.
+Three things worth stating and one that is not.
 
-1. The sketch is flat: 5.5-5.9 MB at every population. This is the claim the paper
-   makes, now measured at 10^6 rather than inferred from 1,500.
-2. The exact store's own `nbytes` understates what it occupies by 2.2x, because it
+1. The sketch is flat: 10.5-10.7 MB resident at every population above 10^3. This is
+   the claim the paper makes, now measured at 10^6 rather than inferred from 1,500.
+2. The dense table's own `nbytes` understates what it occupies by 2.3x, because it
    reports `128 * len(costs)` and ignores the dict, the key strings and the
-   `CostVector` objects. The paper quotes the resident number for the slope and the
-   `nbytes` number for the 1,500-subject comparison, and says which is which.
-3. Per-request cost also rises, 6.6 to 14.5 us, as the dict outgrows cache; that is
-   a secondary effect and the paper only mentions it in passing.
+   `CostVector` objects. The paper quotes resident memory for the 10^6 comparison
+   and accounted bytes for the 1,500-subject comparisons, and labels which is which.
+3. The 10^3 sketch figure (13.5 MB) is high because the process had just built four
+   tables and the allocator had not returned the pages; from 10^4 on the number is
+   stable. Crossover is therefore near 10^4 subjects, where the two are within a
+   megabyte.
+4. Per-request cost rises with population for the table (8.7 to 13.2 us) because the
+   dict outgrows cache; the sketch's cost is dominated by its fixed-width updates.
 
 `results/e23_population.csv` holds the rows.
+
+## E24 — a budget domain that mixes pure DP and zCDP
+
+A cost vector has a pure-DP part and a zCDP part; the cap is scalar, so admission
+must test the converted total `g(c)`. Testing the two components against separate
+allowances looks equivalent and is not. `e24_mixed` runs one stream of 40 Laplace
+and Gaussian queries through three domains: the scalar test, the component test, and
+an independent float accountant that recomputes `g` from the admitted list.
+
+At a 1.0 eps cap on the mixed stream the scalar test admits 27 queries and ends at
+0.99 eps; the component test admits all 40, passes both of its own checks, and ends
+at 1.41 eps. At 0.5 eps the gap is 12 against 30 admitted, 1.81x the cap. Pure
+streams agree, which is why the bug is easy to miss: it only appears when the two
+mechanism families are mixed.
+
+`tests/test_budget_domain.py` pins the sound direction and the failure.
+
 ## Reading the numbers
 
 * Violation counts are the load-bearing result; wall-clock numbers are
