@@ -49,7 +49,7 @@ global lock, and 91.5k on disjoint subjects against 25.2k. It removes a serialis
 point, not contention.
 
 Three platform processes against a coordinator process of their own reach 237
-answers per second once every step is fsynced (E22); killing that coordinator
+answers per second with each step fsynced (E22); killing that coordinator
 mid-trace and restarting it from the log costs 1.05\,s and 7\% of steady-state
 throughput, and still delivers 760 answers, none uncharged, no duplicate charge, and
 a worst client spend of $0.38\eps$ against $0.5\eps$. One client alone over
