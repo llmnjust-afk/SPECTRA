@@ -2,21 +2,20 @@
 \label{sec:eval-enforce}
 
 Table~\ref{tab:enforce} reports the central comparison at six cap levels, each
-averaged over three seeds. At a cap of $\eps{=}1.0$, \sys\ admits 0.933 of requests
+averaged over twelve seeds. At a cap of $\eps{=}1.0$, \sys\ admits 0.934 of requests
 and produces no hard-cap violation, while exact per-tenant blocking admits 0.978 and
 lets 12.7 subjects exceed the cap on average, the worst of them reaching $1.69\eps$.
 Static quota behaves similarly at 0.956 availability and the same violation count.
 The baselines' counters are exact; the violations are caused by the key. A subject
-charged against forty tenant budgets can accumulate forty times the cap, and on this
-trace natural traffic is enough to push a dozen subjects past it without any
-adversary. The escape ratio of Fig.~\ref{fig:attack} reaches a similar number at
+charged against forty tenant budgets can accumulate forty times the cap; on this
+trace natural traffic alone pushes a dozen subjects past it. The escape ratio of Fig.~\ref{fig:attack} reaches a similar number at
 $k{=}60$, but it measures spend against a fixed adversary budget rather than against
 the cap.
 
-The availability gap is the price of soundness and it is not constant: 13.5 points
-at a cap of $0.5\eps$, 10.0 at $0.75\eps$, 4.5 at $1.0\eps$, and nothing at
-$1.5\eps$ and above, where \sys\ reaches full availability while the baselines keep
-violating. The gap shrinks as the cap loosens because the soft threshold at $0.8E$
+The availability gap is the price of soundness and it is not constant: 13.6 points
+at a cap of $0.5\eps$, 10.2 at $0.75\eps$, 4.4 at $1.0\eps$, 3.4 at $1.5\eps$, and
+nothing at $2.0\eps$, where \sys\ reaches full availability while the baselines
+still violate the cap twelve times per run. The gap shrinks as the cap loosens because the soft threshold at $0.8E$
 stops binding: when natural traffic never approaches it, \sys\ behaves like exact
 global accounting. The cap of $3.0\eps$ is a control---no policy violates it because
 the trace's natural maximum is $2.01\eps$---which confirms that the baseline
@@ -24,9 +23,10 @@ violations at tighter caps come from the key and not from the accounting.
 
 \begin{table}[tb]
 \centering
-\caption{Enforcement across cap levels (E3, mean of three seeds). ``Viol.'' is
+\caption{Enforcement across cap levels (E15, mean of twelve seeds). ``Viol.'' is
 the number of subjects whose cumulative spend exceeded the cap; availability is
-the admitted fraction.}
+the admitted fraction. The 95\% confidence interval of \sys's availability is at
+most $\pm0.008$ at every cap.}
 \label{tab:enforce}
 \footnotesize
 \setlength{\tabcolsep}{3pt}
@@ -36,9 +36,9 @@ the admitted fraction.}
 \cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
 Cap & Avail. & Viol. & Avail. & Viol. & Avail. & Viol. \\
 \midrule
-0.50 & 0.754 & 0 & 0.889 & 15.0 & 0.903 & 15.0 \\
-0.75 & 0.856 & 0 & 0.956 & 13.0 & 0.939 & 13.0 \\
-1.00 & 0.933 & 0 & 0.978 & 12.7 & 0.956 & 12.7 \\
+0.50 & 0.752 & 0 & 0.888 & 15.2 & 0.903 & 15.1 \\
+0.75 & 0.854 & 0 & 0.956 & 13.0 & 0.939 & 13.0 \\
+1.00 & 0.934 & 0 & 0.978 & 12.7 & 0.956 & 12.7 \\
 1.50 & 0.966 & 0 & 1.000 & 12.0 & 1.000 & 12.0 \\
 2.00 & 1.000 & 0 & 1.000 & 12.0 & 1.000 & 12.0 \\
 3.00 & 1.000 & 0 & 1.000 & 0.0 & 1.000 & 0.0 \\
@@ -46,10 +46,16 @@ Cap & Avail. & Viol. & Avail. & Viol. & Avail. & Viol. \\
 \end{tabular}
 \end{table}
 
-Three seeds bound the noise. \sys's availability has a standard deviation of at
-most 0.0025 at every cap except $0.75\eps$, where it is 0.012; the two baselines
-keep exact counters and are deterministic, so their only seed-dependent entry is
-the violation count at $1.0\eps$, which is 13, 13 and 12.
+Twelve seeds bound the noise. The 95\% confidence interval of \sys's
+availability, from Student's $t$ with eleven degrees of freedom, is at most
+$\pm0.008$; because every policy sees the same twelve traces, the paired
+difference is tighter still. At $1.0\eps$ \sys\ admits $4.4\pm0.2$ points fewer
+requests than exact blocking and $2.2\pm0.2$ fewer than static quota, while both
+baselines exceed the cap $12.7\pm0.3$ times per run against zero. Their accounting
+is deterministic, so the only quantity that varies across seeds is the violation
+count, and it varies by one subject. Zero violations is an observation over twelve
+traces, not a proof; the proof is Proposition~\ref{prop:safety}, and the experiment
+is what tells us the implementation realises it.
 
 Figure~\ref{fig:attack} turns to the adversary. Under a tenant that splits a
 fixed budget across $k$ identities, the escape ratio of audit-only and token-bucket

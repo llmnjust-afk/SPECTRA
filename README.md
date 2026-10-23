@@ -193,6 +193,8 @@ python3 -m privfuse.experiments.run_all          # core suite
 python3 -m privfuse.experiments.e8_scale         # scale sweep
 python3 -m privfuse.experiments.e13_settlement_scale   # settlement scaling
 python3 -m privfuse.experiments.e14_churn             # hot-table churn
+python3 -m privfuse.experiments.e15_replication       # twelve-seed replication
+python3 -m privfuse.experiments.e16_windowed          # exact windowed baseline
 python3 -m privfuse.cli run e4 --figures         # one experiment
 python3 -m privfuse.cli figures                  # rebuild figures only
 ```

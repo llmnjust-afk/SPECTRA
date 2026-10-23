@@ -1,0 +1,20 @@
+{
+  "caps": [
+    1.0,
+    0.5
+  ],
+  "n_requests": 12000,
+  "n_subjects": 1500,
+  "policies": [
+    "privfuse",
+    "exact_windowed",
+    "exact_global",
+    "static_quota"
+  ],
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "window": 600.0
+}

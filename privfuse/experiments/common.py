@@ -13,6 +13,7 @@ from privfuse.baselines import (
     AuditOnlyPolicy,
     ExactBlockingPolicy,
     ExactGlobalPolicy,
+    ExactWindowedPolicy,
     StaticQuotaPolicy,
     TokenBucketPolicy,
 )
@@ -31,6 +32,7 @@ BASELINES: dict[str, Callable[[Trace], Any]] = {
     "token_bucket": lambda trace: TokenBucketPolicy(caps=trace.caps),
     "audit_only": lambda trace: AuditOnlyPolicy(caps=trace.caps),
     "exact_global": lambda trace: ExactGlobalPolicy(caps=trace.caps),
+    "exact_windowed": lambda trace: ExactWindowedPolicy(caps=trace.caps),
 }
 
 

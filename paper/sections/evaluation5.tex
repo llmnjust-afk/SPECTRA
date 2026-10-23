@@ -32,5 +32,5 @@ costs---roughly a quarter of a millisecond per query, and no more.
 
 Three caveats follow. The coordinator is one process, so the numbers bound the
 protocol rather than a deployment, and the cross-process test measures a loopback
-round trip, not a wide-area one. And a Fabric-backed ledger adds its own commit round trip, which we did not
-measure because the adapter is a stub (Section~\ref{sec:impl}).
+round trip, not a wide-area one. A Fabric-backed ledger adds a commit round trip; the
+adapter is a stub (Section~\ref{sec:impl}), so we did not measure it.

@@ -4,6 +4,7 @@ from privfuse.baselines.policies import (
     AuditOnlyPolicy,
     ExactBlockingPolicy,
     ExactGlobalPolicy,
+    ExactWindowedPolicy,
     StaticQuotaPolicy,
     TokenBucketPolicy,
 )
@@ -14,4 +15,5 @@ __all__ = [
     "AuditOnlyPolicy",
     "ExactBlockingPolicy",
     "ExactGlobalPolicy",
+    "ExactWindowedPolicy",
 ]

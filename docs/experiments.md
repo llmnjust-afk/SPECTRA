@@ -160,6 +160,27 @@ re-seeded from the sketch upper bound, so its counter over-estimates but never
 under-estimates. If a churn row ever shows a violation, the re-seeding path is
 wrong.
 
+## E15 — twelve-seed replication
+
+The cap sweep rerun on twelve seeds instead of three, with the same traces for every
+policy so the comparison is paired. Reports mean, sample standard deviation and a
+95% Student-t interval per policy and cap, plus the paired availability difference
+against PrivFuse. The summary is derived from the raw per-seed rows; nothing is
+smoothed or dropped.
+
+## E16 — exact windowed accountant
+
+An exact per-subject event log with a sliding window, used as the strong baseline
+that Section VII-E used to claim was impossible. It enforces the same hard cap and
+soft budget inside the window, so its estimate is exact and its memory grows with
+events in the window rather than with the population.
+
+Reported per policy: availability, cumulative violations against exact truth,
+windowed peak spend and the number of subjects whose windowed spend crosses the cap
+(a two-pointer scan over allowed events), memory and microseconds per request. The
+two violation columns are deliberately separate: windowed enforcement bounds a
+window, not a lifetime, and the experiment shows exactly that.
+
 ## Reading the numbers
 
 * Violation counts are the load-bearing result; wall-clock numbers are

@@ -244,3 +244,90 @@ class ExactGlobalPolicy:
             "tracked_subjects": float(len(self._costs)),
             "bytes": float(256 * len(self._costs)),
         }
+
+
+@dataclass
+class ExactWindowedPolicy:
+    """Exact per-subject accounting over a sliding window.
+
+    This is the strongest tabulation baseline: it keeps the full event log per
+    subject, so its windowed estimate is exact and it can express a windowed
+    SLO without a sketch.  It is the honest competitor to a windowed accountant
+    at small populations, and the wrong structure at large ones, because its
+    memory grows with the number of events inside the window rather than with
+    the number of subjects.
+
+    Admission is stateless apart from the log: a request whose projected
+    windowed spend would cross the hard cap is refused, and one that would
+    cross the soft budget is degraded by the same factor PrivFuse uses.
+    """
+
+    caps: dict[str, float]
+    window: float = 600.0
+    delta: float = 1e-5
+    soft_ratio: float = 0.8
+    degrade_factor: float = 0.5
+    degrade_utility_loss: float = 0.3
+    name: str = "exact_windowed"
+
+    def __post_init__(self) -> None:
+        self._events: dict[str, list[tuple[float, CostVector]]] = {}
+        self.rejections = 0
+        self.degraded = 0
+        self._bytes_per_event = 256
+
+    def _windowed(self, subject: str, now: float) -> CostVector:
+        events = self._events.get(subject)
+        if not events:
+            return CostVector.zero()
+        cut = now - self.window
+        keep = [e for e in events if e[0] > cut]
+        if len(keep) != len(events):
+            self._events[subject] = keep
+        total = CostVector.zero()
+        for _, cost in keep:
+            total = total + cost
+        return total
+
+    def begin(self, request: QueryRequest) -> Decision:
+        now = request.timestamp
+        projections = []
+        for subject in request.subjects:
+            spent = self._windowed(subject, now)
+            hard = self.caps[subject]
+            if (spent + request.cost).eps(self.delta) > hard + 1e-12:
+                self.rejections += 1
+                return _deny(request, "exact_windowed_cap")
+            projections.append((spent, hard))
+        if any(
+            (spent + request.cost).eps(self.delta) > self.soft_ratio * hard
+            for spent, hard in projections
+        ):
+            charged = request.cost.scale(self.degrade_factor)
+            self.degraded += 1
+            decision = _allow(request, charged, "exact_windowed_degraded")
+            decision.utility_loss = self.degrade_utility_loss
+            return decision
+        return _allow(request, request.cost, "exact_windowed_ok")
+
+    def finish(self, decision: Decision, now: float) -> None:
+        if not decision.allowed:
+            return
+        for subject in decision.request.subjects:
+            self._events.setdefault(subject, []).append((now, decision.charged))
+
+    def abort(self, decision: Decision, now: float) -> None:
+        return None
+
+    def tick(self, now: float) -> None:
+        return None
+
+    def stats(self) -> dict[str, float]:
+        events = sum(len(v) for v in self._events.values())
+        return {
+            "policy_rejections": float(self.rejections),
+            "policy_degraded": float(self.degraded),
+            "tracked_subjects": float(len(self._events)),
+            "window_events": float(events),
+            "bytes": float(self._bytes_per_event * events),
+        }

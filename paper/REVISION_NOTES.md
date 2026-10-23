@@ -122,9 +122,11 @@ E9 明写"单种子"；逃逸比给出有限轨迹定义；内存区分 sketch �
 | 未定义引用 | `pdftotext main.pdf - \| grep -c "??"` | 0 |
 | 引用一致性 | 脚本比对 `\cite{}` 与 `refs.bib` 键 | 32 = 32，missing 0，uncited 0 |
 | 文献核验 | `ref_verify`（CrossRef + OpenAlex） | 7 条抽检，0 UNVERIFIED，字段回填后写入 |
-| 单元测试 | `python3 -m pytest -q` | **37 passed** |
+| 单元测试 | `python3 -m pytest -q` | **40 passed**（新增滑窗基线 3 个用例） |
 | 新实验 E13 | `python3 -m privfuse.experiments.e13_settlement_scale` | 6 组进程内 + 3 组跨进程，3 次重复，CSV 已落盘 |
 | 新实验 E14 | `python3 -m privfuse.experiments.e14_churn` | 5 变体 × 3 seed + 3 变体 × 3 seed（cap 0.15），CSV 已落盘 |
+| 新实验 E15 | `python3 -m privfuse.experiments.e15_replication` | 12 seed × 6 cap × 3 策略 = 216 次运行，输出原始行 + t 区间汇总 |
+| 新实验 E16 | `python3 -m privfuse.experiments.e16_windowed` | 精确滑窗账本 vs PrivFuse vs 精确累积，2 cap × 3 seed × 4 策略 |
 | 匿名包 | 解包后 `pytest -q` + `grep` 标识符 | 37 passed，无标识符命中 |
 | 表格核对 | 正文 Table I ↔ `e3_breaker.csv` | 可用率/违规数/max_eps 全部一致 |
 | 图核对 | Fig. 2/3 ↔ `e4_attack.csv`、`e8_scale.csv` | 一致；图已重绘可读 |
@@ -133,20 +135,35 @@ E9 明写"单种子"；逃逸比给出有限轨迹定义；内存区分 sketch �
 截断长实验，已改为显式超时参数；E13 初版因 `mp.Queue` 传输 2500 个浮点
 造成管道死锁，已改为只回传聚合分位数。
 
-## C. 未能完成、需外部条件或作者决策
+## C. 后续补充实验（第二轮）
+
+**E15 十二 seed 复现。** 表 I 由 3 seed 改为 12 seed，给出 Student-t 95% 区间
+与配对差值：cap 1.0 时 PrivFuse 0.934（CI ±0.002），比 exact blocking 少收
+4.4±0.2 个百分点、比 static quota 少 2.2±0.2，而两者每轮违规 12.7±0.3 次对 0。
+cap 2.0 处 PrivFuse 达到满可用率且零违规，基线仍违规 12 次。原稿"1.5ε 及以上
+没有差距"的说法在 1.5ε 处不成立（3.4 个百分点），已改正。
+
+**E16 精确滑窗账本（重要更正）。** 原稿 §VII-E 写"精确账本无法表达窗口 SLO"，
+这是错的：实现了 `ExactWindowedPolicy`（每主体事件日志 + 滑动窗口）后，它在
+600 s 窗口、0.5ε cap 下可用率 1.000，内存 1.08 MB，但 1,500 个主体中有 6 个
+在**生命周期**口径上超额——窗口约束不等于生命周期约束。同时精确累积账本在
+1,500 主体处与 PrivFuse 可用率相差不到 1 个点（0.898 vs 0.906；0.713 vs 0.721），
+内存 0.38 MB vs 5.0 MB。因此论文现在明确写：PrivFuse 的立足点是 10^6 规模下的
+内存墙，而不是"窗口无法精确实现"或"小规模下精确账本慢"。原句已删除，
+并补充"19 µs 与 228 µs 不可直接比较（前者不含 breaker/coordinator/window）"。
+
+## D. 未能完成、需外部条件或作者决策
 
 1. **多节点/拜占庭/多副本一致性**：需真实集群与共识实现，E13 仅覆盖单机
    双进程 loopback。论文已把结论限定在协议层。
-2. **每主体标志位的独立内存计量**：当前实现未把该开销与 sketch 状态分开
-   计量，论文按"账本每主体一个标量 + 一个标志位"陈述，未给单独数字。
-3. **真实数据 trace**（TPCH/生产日志）未接入，全部为合成人群；E14 的
-   churn 也是合成模式，不是真实流量重排。
-4. **匿名 artifact 的实际上传**：包已就绪并自检通过，但必须由作者在投稿
-   系统中附加；若最终不附加，需删去 implementation 节的那句声明。
-5. **Shuffler (SIGMOD 2018)**：多方检索不存在，已用 EUROCRYPT'19 的
-   shuffler 模型文献替代；若作者手头有纸质出处，可自行补入并核对。
+2. **每主体标志位的独立内存计量**：未与 sketch 状态分开计量。
+3. **真实数据 trace**：全部为合成人群，E14 的 churn 也是合成模式。
+4. **匿名 artifact 的实际上传**：包已就绪，需作者在投稿系统附加。
+5. **Shuffler (SIGMOD 2018)**：多方检索不存在，已用 EUROCRYPT'19 替代。
+6. **E16 的滑窗基线是自研实现**，未与公开系统对拍；内存口径为每事件 256 B
+   的估算，不是实测对象大小。
 
-## D. 最终科学评估
+## E. 最终科学评估
 
 修订后，定义—命题—证明—实现—实验这条链现在自洽：B3 与 B4 是真实的
 技术缺陷，已修好而不是用措辞掩盖；B5 经原始数据核查证明原句正确，

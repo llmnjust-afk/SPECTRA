@@ -15,8 +15,8 @@ per epoch raises the mean over-estimate from 0.16 to 0.28 at a $0.15\eps$ cap an
 from 0.25 to 0.65 at $1.0\eps$, and the p99 from 1.7$\times$ to 2.5$\times$ and
 2.2$\times$ to 5.1$\times$; at the tight cap it costs 4.5 points of availability.
 Safety is untouched---zero violations in 30 runs---because an evicted subject is
-re-seeded from the sketch upper bound; but the table stops paying for itself, which
-bounds what it can buy against an adversary who chooses the traffic.
+re-seeded from the sketch upper bound; but the table stops paying for itself,
+bounding what it can buy against an adversary who chooses the traffic.
 
 The hot-table row is a warning. Disabling the table raises availability from
 0.923 to 0.930 and lowers cost from 101 to 80\,$\mu$s, but the breaker's flap count
@@ -26,15 +26,22 @@ monitor.
 
 
 
-The last row is the honest comparison: at this scale exact global accounting uses
-less memory and is nine times faster per request, because 1{,}500 subjects fit in a
-hash table. It loses at $10^{6}$ subjects (Figure~\ref{fig:scale}, 265\,MB) and
-cannot express the windowed SLO at all, so \sys\ is the right structure when either
-condition holds.
+The last row is the honest comparison, and it is less comfortable than it
+suggests. At 1{,}500 subjects exact cumulative accounting matches \sys's
+availability within a point ($0.898$ against $0.906$ at $1.0\eps$; $0.713$ against
+$0.721$ at $0.5\eps$) with 0.38\,MB against 5.0\,MB. Its 19\,$\mu$s per request is
+not a like-for-like cost, since it runs no breaker, coordinator or window; the price
+of those is measured on the estimator alone in Section~\ref{sec:eval-cost}. A windowed exact accountant is likewise implementable, and
+we built one to check (E16, 600\,s window): at $0.5\eps$ it admits every request,
+because no subject crosses the window cap, while six of 1{,}500 subjects exceed
+their \emph{lifetime} cap. Windowed enforcement bounds a window, not a lifetime.
+\sys's case therefore rests neither on windows being inexpressible nor on exact
+tabulation being slow at $10^{3}$ subjects, but on $10^{6}$ subjects, where the table
+is 265\,MB (Figure~\ref{fig:scale}).
 
 Stability is measured on a load oscillating around the throttle threshold: with
-hysteresis and dwell the breaker makes zero transitions, and with both disabled it
-makes 26, of which 13 are de-escalations followed by immediate re-escalation.
+hysteresis and dwell the breaker makes zero transitions, and without them 26, 13 of
+which are de-escalations followed by immediate re-escalation.
 
 \subsection{Why zCDP and Not R\'enyi DP}
 \label{sec:eval-backend}

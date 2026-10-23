@@ -1,0 +1,35 @@
+{
+  "base": {
+    "attack_splits": 42,
+    "n_requests": 6000,
+    "n_subjects": 1200
+  },
+  "caps": [
+    0.5,
+    0.75,
+    1.0,
+    1.5,
+    2.0,
+    3.0
+  ],
+  "n_seeds": 12,
+  "policies": [
+    "privfuse",
+    "exact_blocking",
+    "static_quota"
+  ],
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11
+  ]
+}

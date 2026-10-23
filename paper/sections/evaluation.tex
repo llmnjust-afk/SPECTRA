@@ -7,7 +7,8 @@
 We run on a two-vCPU container with 4\,GiB of RAM, CPython 3.11, and a single
 process. The host is deliberately small, which makes the absolute latencies a conservative
 upper bound.
-Every experiment is repeated on three seeds and we report the mean; per-seed rows
+Experiments are repeated on three seeds and we report the mean, except the cap
+sweep, which the replication study reruns on twelve; per-seed rows
 are committed with the code.
 
 The generator produces $12{,}000$ requests from $40$ tenants over $1{,}500$

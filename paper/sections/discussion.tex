@@ -1,13 +1,12 @@
 \section{Discussion}
 \label{sec:discussion}
 
-Three principles seem to us more transferable than the specific parameters. Split
-the accounting state by the kind of question it answers: exact where the quantity is
-money and must be settled, one-sided where it has time structure and must be cheap.
-Key every charge on the party that bears the loss rather than the party that pays,
-because the gap between the two is the gap an adversary exploits. And treat the
-charge as a transaction with a commit point, because a counter that can be
-incremented without one will eventually be incremented twice or not at all.
+Three principles transfer better than the specific parameters. Split the accounting
+state by the kind of question it answers: exact where the quantity is money and must
+be settled, one-sided where it has time structure and must be cheap. Key every charge
+on the party that bears the loss, not the party that pays, because that gap is the
+one an adversary exploits. Treat the charge as a transaction with a commit point,
+because a counter without one is eventually incremented twice or not at all.
 
 The deployment path we have in mind replicates the coordinator across a small set
 of consensus nodes, owns each subject on one node so the critical section stays

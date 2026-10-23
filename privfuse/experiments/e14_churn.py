@@ -27,7 +27,7 @@ from privfuse.factory import PrivFuseConfig, build_privfuse
 from privfuse.platform.runtime import Market
 from privfuse.trace.generator import EPS_DELTA, TraceConfig, generate_trace
 
-BASE = dict(n_requests=6000, n_subjects=1500, zipf_alpha=1.15)
+BASE: dict[str, Any] = dict(n_requests=6000, n_subjects=1500, zipf_alpha=1.15)
 VARIANTS = [(256, 0), (256, 100), (256, 400), (32, 400), (1, 400)]
 CAPS = (1.0, 0.15)
 SEEDS = (0, 1, 2)
