@@ -1,0 +1,9 @@
+{
+  "cap": 0.5,
+  "kill_at_answers": 300,
+  "n_platforms": 3,
+  "n_requests": 900,
+  "n_subjects": 60,
+  "note": "one host, two vCPUs, loopback TCP; not a multi-node deployment",
+  "single_subject_only": true
+}

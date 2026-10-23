@@ -311,6 +311,34 @@ latency: `e21_cost.csv` measures 76 us per reserve-and-commit against 7.5 us in
 memory, because each transition is an fsync. Group commit would amortise that and
 is not implemented.
 
+## E22 — three platform processes and a coordinator that dies
+
+`e22_deploy` starts a coordinator process with a write-ahead log, then three
+platform processes that read the trace for their own platform and settle over a
+line protocol on loopback. When 300 answers have been handed back it sends
+`SIGKILL` to the coordinator, restarts it from the log on the same port, and the
+platforms retry the transaction they were in (reserve is idempotent for a
+committed or reserved id, so a lost reply cannot double-charge).
+
+Only single-subject requests are run, because the line protocol prices one
+subject per reservation; 760 of 900 requests qualify. Two modes are reported:
+`durable+restart` and `durable` (same code, no kill).
+
+| mode | answers | uncharged | worst client ε (cap 0.5) | downtime | steady ans/s |
+|---|---|---|---|---|---|
+| durable+restart | 760 | 0 | 0.380 | 1.05 s | 221 |
+| durable | 760 | 0 | 0.380 | — | 237 |
+
+The restart costs about 1 s of unavailability and 7% of steady-state
+throughput; no answer is delivered without a committed charge and no subject is
+charged twice. `reconnect_attempts` counts the retries the three platforms made
+while the coordinator was down.
+
+What this is not: one host, two vCPUs, loopback TCP, no consensus, no
+replication, no network partition. The honest comparison for throughput is E13b
+(1.9k pairs/s), which runs an in-memory ledger and no answer-log fsync; the
+difference is the price of durability, not of distribution.
+
 ## Reading the numbers
 
 * Violation counts are the load-bearing result; wall-clock numbers are

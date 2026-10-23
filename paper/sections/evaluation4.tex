@@ -16,11 +16,9 @@ $0.15\eps$ cap and from 0.25 to 0.65 at $1.0\eps$, and the p99 from 1.7$\times$ 
 subject is re-seeded from the sketch upper bound, but the table stops paying for
 itself, which bounds what it can buy against an adversary who chooses the traffic.
 
-The hot-table row is a warning. Disabling the table raises availability from
-0.923 to 0.930 and lowers cost from 101 to 80\,$\mu$s, but the breaker's flap count
-falls to zero: the monitor samples its violation rate from the hot table, so a
-capacity of one blinds the SLO machinery. Ablating the table silently ablates the
-monitor.
+Disabling the table raises availability from 0.923 to 0.930 and lowers cost from 101
+to 80\,$\mu$s, but the breaker never flaps: the monitor samples its rate from the hot
+table, so ablating the table silently ablates the monitor.
 
 
 

@@ -1,0 +1,3 @@
+mode,platforms,processes,kills,requests,answers,free_answers,duplicate_answers,worst_client_eps,cap,client_violations,reconnect_attempts,wal_records,torn_records,seconds,answers_per_second,answers_before_kill,downtime_seconds,steady_seconds,steady_answers_per_second
+durable+restart,3.0,4.0,1.0,900.0,760.0,0.0,0.0,0.3797505803596731,0.5,0.0,248.0,1520.0,0.0,4.494567091000135,169.09303712960798,310.0,1.0522419009994337,3.4423251900007017,220.78100064678813
+durable,3.0,4.0,0.0,900.0,760.0,0.0,0.0,0.379750580359673,0.5,0.0,0.0,1520.0,0.0,3.210506544000964,236.72276931505044,0.0,0.0,3.210506544000964,236.72276931505044

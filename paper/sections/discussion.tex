@@ -7,13 +7,12 @@ structure and must be cheap. Key every charge on the party that bears the loss, 
 the one who pays. Treat the charge as a transaction with a commit point, or it will
 eventually be incremented twice or not at all.
 
-A deployment would replicate the coordinator over a few consensus nodes, own each
-subject on one node so the critical section stays local, and shard the ledger by
-subject range. That removes the single-process bottleneck but leaves a trust question:
-a subject's budget lives on one node, which could under-report a charge. Signed
-receipts make that detectable afterwards, which is weaker than the guarantee inside one
-process; closing it needs Byzantine agreement or a proof that the charge matches the
-mechanism executed.
+A deployment would replicate the coordinator over consensus nodes, own each subject
+on one node so the critical section stays local, and shard by subject range; E22 takes
+the first step with separate processes on one host. That leaves a trust question: a
+subject's budget lives on one node, which could under-report a charge, and receipts
+make it detectable only afterwards. Closing it needs Byzantine agreement or a proof
+that the charge matches the mechanism executed.
 
 The accounting layer is itself sensitive: the ledger records which subjects appear in
 which queries, and the hot table is close to a list of the most-queried subjects, so a

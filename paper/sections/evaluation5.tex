@@ -1,25 +1,24 @@
 \subsection{Settlement and Concurrency}
 \label{sec:eval-concurrency}
 
-Five settlement invariants pass, including the refusal to re-bind a reserve;
-Table~\ref{tab:faults} reports the crash points. In the atomicity test, 16 threads issue 3{,}200
-attempts against a subject whose cap funds exactly 100 charges; every thread count from
-2 to 16 admits exactly 100, spends exactly $1.0\eps$, and records zero violations.
+Five settlement invariants pass, among them the refusal to re-bind a reserve. In the
+atomicity test, 16 threads issue 3{,}200 attempts against a subject whose cap funds 100
+charges; every thread count admits exactly 100, $1.0\eps$ and zero violations.
 
 Injecting a crash at each step of the transaction tests
 Proposition~\ref{prop:atomic} directly (Table~\ref{tab:faults}, E19), with the
 invariants read off the ledger rather than off the caller's bookkeeping. Over every
 crash point, one and four threads, and a crash rate up to 5\%, no answer left without
 a committed charge, no transaction was charged twice, and in-flight spend never
-crossed the cap; the price is the crash rate itself, 188 of 200 requests delivered at
-5\%, plus one request in 800 blocked by a suspended hold. Three platforms with one
-ledger each, the last row, are the control that motivates the shared coordinator.
+crossed the cap; the price is the crash rate, 188 of 200 delivered at 5\%, plus one request in 800
+blocked by a suspended hold. The last row, three unshared ledgers, motivates the
+shared coordinator.
 
 \begin{table}[tb]
 \centering
 \caption{Fault injection at each settlement step (E19): one subject, cap
-$1.0\eps$, unit $0.05\eps$, five-second TTL, retry with the same id. A row is sound
-when answers never exceed commits.}
+$1.0\eps$, five-second TTL, same-id retry. A row is sound when answers never exceed
+commits.}
 \label{tab:faults}
 \footnotesize
 \setlength{\tabcolsep}{3pt}
@@ -49,7 +48,11 @@ Striping pays only for disjoint subjects (E13, medians of three): four threads r
 global lock, and 91.5k on disjoint subjects against 25.2k. It removes a serialisation
 point, not contention.
 
-Over loopback one client sustains 1.9k pairs per second at a 201\,$\mu$s median
-round trip, four sustain 2.4k at 283\,$\mu$s (p99 16\,ms), and the server saturates.
-The caveats are one process, a loopback trip, and a stub adapter that hides a real
-commit trip.
+Three platform processes against a coordinator process of their own reach 237
+answers per second once every step is fsynced (E22); killing that coordinator
+mid-trace and restarting it from the log costs 1.05\,s and 7\% of steady-state
+throughput, and still delivers 760 answers, none uncharged, no duplicate charge, and
+a worst client spend of $0.38\eps$ against $0.5\eps$. One client alone over
+loopback sustains 1.9k pairs per second at a 201\,$\mu$s median round trip. The
+caveats are one host, a loopback trip, and a stub adapter that hides the real commit
+trip.
