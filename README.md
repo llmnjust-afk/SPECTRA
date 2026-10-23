@@ -203,6 +203,8 @@ python3 -m privfuse.experiments.e21_restart            # SIGKILL and replay the 
 python3 -m privfuse.experiments.e22_deploy             # coordinator process killed mid-run
 python3 -m privfuse.experiments.e23_population         # dense table vs sketch to 10^6 subjects
 python3 -m privfuse.experiments.e24_mixed              # pure DP and zCDP in one budget
+python3 -m privfuse.experiments.e25_population_slo     # windowed SLO against population truth
+python3 -m privfuse.experiments.e26_sparse             # sparse exact baseline across activity
 python3 -m privfuse.cli run e4 --figures         # one experiment
 python3 -m privfuse.cli figures                  # rebuild figures only
 ```

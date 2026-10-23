@@ -392,6 +392,36 @@ mechanism families are mixed.
 
 `tests/test_budget_domain.py` pins the sound direction and the failure.
 
+## E25 — does the windowed SLO hold over the population?
+
+Every other experiment reads the soft windowed quantity off the hot table. E25
+checks that reading against population truth: a 600 s trace at a 0.5 eps cap, 24
+checkpoints, and for each checkpoint the exact windowed composition of every
+subject recomputed from the ledger, compared with the rate the monitor reports.
+
+With a heavy-tailed population (Zipf 1.15) the table's recall is 1.0 for
+`H >= 64` and 0.95 at `H = 8`, and the monitored rate matches the population rate
+to three decimals. Flatten the popularity (Zipf 0.6) and shrink the table to eight
+slots and recall falls to 0.014 -- 70 of 71 violations missed -- because violators
+are no longer heavy hitters; the monitored rate reads 0.000 against a population
+rate of 0.002. Scanning the sketch over all N subjects recovers every violation in
+both regimes with at most two false alarms in 1,500 subjects, at `O(N)` per epoch.
+The SLO is therefore best effort over the population; the hard cap is not.
+
+## E26 — which exact baseline, and at what activity?
+
+E23 compares against a dense table that allocates a slot per subject whether or
+not the subject is active. E26 adds a sparse map (one ring per active subject) and
+the settlement state behind all three estimators, at 10^6 subjects and four epochs.
+
+Estimator bytes: dense 30.5 MB (activity independent), sparse 1.6 / 17.5 / 83.8 /
+167.6 MB at 1 / 10 / 50 / 100% activity, sketch 2.7 MB. Adding the ledger and WAL,
+totals are 41.6 / 141.6 / 585.9 / 1141.3 MB dense against 12.7 / 128.6 / 639.2 /
+1278.4 MB sparse. Below about 2% activity the sparse map is both smaller and exact,
+and we do not claim the sketch there; at 10% the sketch is already 6x smaller. The
+ledger costs about 1.1 KB per committed subject, so at full activity the settlement
+state alone is 1.1 GB and the estimator choice moves the total by a few percent.
+
 ## Reading the numbers
 
 * Violation counts are the load-bearing result; wall-clock numbers are
