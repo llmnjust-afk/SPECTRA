@@ -77,3 +77,29 @@ def test_coordinator_reservation_is_atomic():
 
     assert coordinator.ledger.committed("s1").eps(1e-5) <= 1.0 + 1e-9
     assert len(admitted) == 100
+
+
+def test_crash_before_commit_delivers_nothing_and_retry_charges_once():
+    from privfuse.experiments.e19_faults import _attempt, _tx
+
+    coord = Coordinator(caps={"s0": 1.0}, ttl=5.0)
+    assert _attempt(coord, _tx("x1", "t0", "p0"), "after_execute", now=0.0) == "crashed"
+    assert coord.ledger.commits == 0
+    assert _attempt(coord, _tx("x1", "t0", "p0"), "none", now=0.5) == "answered"
+    assert coord.ledger.commits == 1
+    assert coord.ledger.committed_eps("s0") == pytest.approx(0.05, abs=1e-12)
+
+
+def test_retry_after_expiry_is_refused_and_the_hold_returns():
+    import pytest as _pytest
+
+    from privfuse.experiments.e19_faults import _attempt, _tx
+
+    coord = Coordinator(caps={"s0": 1.0}, ttl=5.0)
+    _attempt(coord, _tx("x1", "t0", "p0"), "after_reserve", now=0.0)
+    assert coord.ledger.reserved_eps("s0") == _pytest.approx(0.05)
+    coord.tick(now=6.0)
+    assert coord.ledger.reserved_eps("s0") == 0.0
+    with _pytest.raises(LedgerError):
+        _attempt(coord, _tx("x1", "t0", "p0"), "none", now=6.5)
+    assert coord.ledger.commits == 0

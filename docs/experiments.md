@@ -225,6 +225,30 @@ full fragment. `cooling` is indistinguishable from `round_robin` for every polic
 dispersion across identities buys nothing when the identity is not the key. Runs are
 deterministic, so the three seeds coincide.
 
+## E19 — settlement under injected faults
+
+E12 crashes the client at a random point; E19 places the crash at a named step so each
+clause of Proposition 2 has a row: after the reservation (nothing executed), after
+execution (answer withheld), after commit (answer withheld, charge kept), and a client
+retry with the same transaction id, either immediately or after the TTL has released
+the hold.
+
+The invariants are read off the ledger: answers minus commits is the count of answers
+delivered without a charge, `duplicate_commits` and the committed total catch double
+charging, and in-flight spend (committed plus reserved) is checked against the cap.
+Rows for four crash points and two retry timings are printed by the experiment and
+stored in `results/e19_faults.csv`.
+
+Part B sweeps the crash rate (0, 1, 5%) over one and four threads at a cap of 50 eps
+with a 5 s TTL, so the cost of a crash shows up as availability rather than as an
+invariant failure. Part C is the control: three platform-local ledgers instead of the
+shared coordinator, which spend three caps on one subject.
+
+Two properties are worth restating, because they are what the numbers buy: a retry
+before the TTL reuses the reservation and charges once, and a crash after commit keeps
+the charge while withholding the answer (the safe direction). A retry after the TTL is
+refused, and the hold returns to the pool.
+
 ## Reading the numbers
 
 * Violation counts are the load-bearing result; wall-clock numbers are

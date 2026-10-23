@@ -1,0 +1,16 @@
+part,fault,answers,commits,answers_without_charge,duplicate_commits,spent_eps,cap_violations,status,retry,held_before_tick,reclaimed_after_ttl,threads,attempts,crashed,rejected,frozen_at_end
+matrix,none,1.0,1.0,0.0,0.0,0.05,0.0,answered,-,0.0,0.0,,,,,
+matrix,none,1.0,1.0,0.0,0.0,0.05,0.0,answered,-,0.0,0.0,,,,,
+matrix,after_reserve/immediate,1.0,1.0,0.0,0.0,0.05,0.0,crashed,answered,0.05,0.0,,,,,
+matrix,after_reserve/after_ttl,0.0,0.0,0.0,0.0,0.0,0.0,crashed,refused:transaction 'x1' alrea,0.05,1.0,,,,,
+matrix,after_execute/immediate,1.0,1.0,0.0,0.0,0.05,0.0,crashed,answered,0.05,0.0,,,,,
+matrix,after_execute/after_ttl,0.0,0.0,0.0,0.0,0.0,0.0,crashed,refused:transaction 'x1' alrea,0.05,1.0,,,,,
+matrix,after_commit/immediate,0.0,1.0,0.0,0.0,0.05,0.0,crashed,refused:transaction 'x1' alrea,0.0,0.0,,,,,
+matrix,after_commit/after_ttl,0.0,1.0,0.0,0.0,0.05,0.0,crashed,refused:transaction 'x1' alrea,0.0,1.0,,,,,
+sweep,q=0.0,200.0,200.0,0.0,0.0,10.000000000000007,0.0,,,,,1.0,200.0,0.0,0.0,0.0
+sweep,q=0.01,199.0,199.0,0.0,0.0,9.950000000000006,0.0,,,,,1.0,200.0,1.0,0.0,0.05
+sweep,q=0.05,188.0,192.0,0.0,0.0,9.600000000000001,0.0,,,,,1.0,200.0,12.0,0.0,0.15000000000000002
+sweep,q=0.0,800.0,800.0,0.0,0.0,39.999999999999865,0.0,,,,,4.0,800.0,0.0,0.0,0.0
+sweep,q=0.01,794.0,796.0,0.0,0.0,39.799999999999876,0.0,,,,,4.0,800.0,6.0,0.0,1.3877787807814457e-17
+sweep,q=0.05,755.0,767.0,0.0,0.0,38.34999999999996,0.0,,,,,4.0,800.0,44.0,1.0,0.3
+control,local_ledgers,60.0,60.0,0.0,0.0,3.000000000000001,1.0,,,,,,,,,

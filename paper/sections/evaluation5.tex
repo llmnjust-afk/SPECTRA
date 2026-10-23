@@ -4,32 +4,31 @@
 Five settlement invariants are checked directly and all pass: a repeated commit
 charges once, a timeout releases, a repeated reserve returns the same reservation and
 cannot be re-bound, a crash between reserve and commit leaves no double spend, and an
-expired reservation is recovered. Their failure mode is invisible in aggregates: a lost charge only makes the next
-query admissible. In
-the atomicity test, 16 threads issue 3{,}200 attempts against a subject whose cap
-funds exactly 100 charges; every thread count from 2 to 16 admits exactly 100, spends
-exactly $1.0\eps$, and records zero violations, so check-and-reserve is atomic in
-practice and not only in argument.
+expired reservation is recovered. In the atomicity test, 16 threads issue 3{,}200
+attempts against a subject whose cap funds exactly 100 charges; every thread count from
+2 to 16 admits exactly 100, spends exactly $1.0\eps$, and records zero violations.
 
-Throughput depends on the workload, and our earlier reading of it was too
-pessimistic. With every thread contending for one subject, striping buys nothing:
-four threads reach 21.4k reserve-and-commit operations per second against 26.5k
-for a single global lock, and even one thread is 28\% slower, 83k against 116k,
-because acquiring several locks costs more than acquiring one. With disjoint
-subjects the same code scales instead: four threads reach 91.5k operations per
-second against 25.2k for the global lock, a factor of 3.6, because a transaction
-now waits only for the stripes it touches (E13, medians of three repetitions). Striping removes a serialisation point, not contention: a market whose traffic
-concentrates on a few subjects will not benefit from it.
+Injecting a crash at each step of the transaction tests
+Proposition~\ref{prop:atomic} directly (E19). Over every crash point, one and four
+threads, and a crash rate up to 5\%, no answer left without a committed charge, no
+transaction was charged twice, and in-flight spend never crossed the cap. A retry
+before the TTL reuses the reservation and charges once; a retry after it is refused and
+the hold returns. The cost is the crash rate itself---188 of 200 requests at
+5\%---plus one request in 800 blocked by a suspended hold. Three platforms with one
+ledger each spend 3.0 caps.
 
-Threads cannot carry the coordinator past one interpreter, so we also served it over
-loopback TCP to separate clients. One client sustains 1.9k
-reserve-and-commit pairs per second at a median round trip of 201\,$\mu$s; four
-clients sustain 2.4k at 283\,$\mu$s with a p99 of 16\,ms. The server saturates,
-so the limit is the coordinator's interpreter rather than the transport: a
-deployment that needs more must shard subjects across coordinators and replicate
-them, which we have not built. The bound is a quarter of a millisecond per query, and no more.
+Throughput depends on the workload, and our earlier reading was too pessimistic. With
+every thread contending for one subject, striping buys nothing: four threads reach
+21.4k reserve-and-commit operations per second against 26.5k for a single global lock,
+and even one thread is 28\% slower. With disjoint subjects the same code scales: four
+threads reach 91.5k against 25.2k, a factor of 3.6, because a transaction waits only
+for the stripes it touches (E13, medians of three). Striping removes a serialisation
+point, not contention: concentrated traffic will not benefit.
 
-Three caveats follow. The coordinator is one process, so the numbers bound the
-protocol rather than a deployment, and the cross-process test measures a loopback
-round trip, not a wide-area one. A Fabric-backed ledger adds a commit round trip; the
-adapter is a stub (Section~\ref{sec:impl}), so we did not measure it.
+Served over loopback TCP, one client sustains 1.9k reserve-and-commit pairs per second
+at a median round trip of 201\,$\mu$s; four sustain 2.4k at 283\,$\mu$s with a p99 of
+16\,ms. The server saturates, so the limit is the interpreter, not the transport, and
+more needs subjects sharded across coordinators, which we have not built. The caveats
+are that the coordinator is one process, that the round trip is a loopback one, and
+that the Fabric adapter is a stub: a real ledger adds a commit round trip we did not
+measure.

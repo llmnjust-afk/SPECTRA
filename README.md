@@ -197,6 +197,7 @@ python3 -m privfuse.experiments.e15_replication       # twelve-seed replication
 python3 -m privfuse.experiments.e16_windowed          # exact windowed baseline
 python3 -m privfuse.experiments.e17_latency            # latency breakdown and load
 python3 -m privfuse.experiments.e18_adaptive_attack    # closed-loop attacker
+python3 -m privfuse.experiments.e19_faults             # crash injection at each settlement step
 python3 -m privfuse.cli run e4 --figures         # one experiment
 python3 -m privfuse.cli figures                  # rebuild figures only
 ```

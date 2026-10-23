@@ -1,0 +1,18 @@
+{
+  "attempts_per_thread": 200,
+  "cap_matrix": 1.0,
+  "cap_sweep": 50.0,
+  "platforms": [
+    "p0",
+    "p1",
+    "p2"
+  ],
+  "step_seconds": 0.05,
+  "subjects": [
+    "s0",
+    "s1",
+    "s2"
+  ],
+  "ttl": 5.0,
+  "unit_eps": 0.05
+}
