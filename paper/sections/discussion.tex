@@ -29,9 +29,8 @@ Three further limitations bound the claims. The SLO monitor samples the hot tabl
 so its coverage depends on the hot capacity, and sampling the epoch ring directly is
 a fix we have not evaluated. The adversary chooses its split in advance; one that
 observes throttling and re-times its fragments could extract more than our ratios
-suggest, though the key still binds it. And we do not evaluate an adversary that
-cycles subjects through the hot table to force repeated seeding: seeding keeps the
-estimate one-sided, but what that churn costs in availability is unmeasured.
+suggest, though the key still binds it. An adversary that cycles subjects through the
+hot table is measured in E14: it costs accuracy and availability, never soundness.
 
 What would falsify the approach? If a population is small and its policy
 cumulative, exact counting is cheaper and faster, as our ablation shows at

@@ -181,6 +181,28 @@ windowed peak spend and the number of subjects whose windowed spend crosses the 
 two violation columns are deliberately separate: windowed enforcement bounds a
 window, not a lifetime, and the experiment shows exactly that.
 
+## E17 — latency breakdown and load
+
+Part A profiles a full run with `cProfile` and aggregates self time by module, so
+the sketch, the accountant, the breaker, the coordinator and the market harness can
+be separated. Profiling inflates absolute cost, so only the shares are read from it.
+
+Part B times `begin` and `finish` separately for every request, over three trials,
+keeping the trial with the median mean service time (the host is shared, so a
+scheduler pause must not decide the reported tail). The empirical service-time
+distribution is then fed to two single-server FCFS queues: Poisson arrivals at
+utilisation 0.5 to 0.95, and an alternating burst pattern whose time-average rate
+matches the requested utilisation. Each point is the median of five replicates,
+because a single replicate's p99 moves by tens of milliseconds.
+
+A third row disables the tenant-pressure sweep (`_tenant_refresh = 10**9`) to show
+what the periodic O(hot-table) scan costs. This is the ablation behind the paper's
+claim that one function owns the tail; it changes admission behaviour, so it is a
+diagnostic, not a configuration we recommend.
+
+Latency from the queue model is queueing plus service for one coordinator thread.
+It excludes network, client time and any second server.
+
 ## Reading the numbers
 
 * Violation counts are the load-bearing result; wall-clock numbers are

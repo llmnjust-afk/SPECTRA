@@ -92,10 +92,9 @@ scaling study to $10^6$ subjects (Section~\ref{sec:eval}).
 The measurements separate what the design buys from what it costs. At a cap of
 $\eps{=}1.0$, \sys\ admits 0.934 of requests with zero hard-cap violations, while
 exact per-tenant blocking admits 0.978 and violates the cap 12.7 times per run: a
-4.5-point availability gap is the price of soundness. Estimator memory falls from
+4.4-point availability gap is the price of soundness. Estimator memory falls from
 265\,MB to 4.7\,MB at $10^6$ subjects, and the sketch path costs
 32\,$\mu$s per request against 4.6\,$\mu$s for an exact table, a gap invisible next
-to query execution. The escape ratio stays at 0.82 however finely the attacker
-splits, because splitting does not change the subject key, while audit-only
-enforcement rises to 2.43. We also report where the design does not help: striping
-pays off only for disjoint subjects, and churn erodes the hot table.
+to query execution. We also report where the design does not help: striping pays off only for
+disjoint subjects, churn erodes the hot table, and a periodic sweep dominates the
+p99 of the admission path.

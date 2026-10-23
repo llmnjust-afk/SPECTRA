@@ -17,9 +17,8 @@ at a cap of $0.5\eps$, 10.2 at $0.75\eps$, 4.4 at $1.0\eps$, 3.4 at $1.5\eps$, a
 nothing at $2.0\eps$, where \sys\ reaches full availability while the baselines
 still violate the cap twelve times per run. The gap shrinks as the cap loosens because the soft threshold at $0.8E$
 stops binding: when natural traffic never approaches it, \sys\ behaves like exact
-global accounting. The cap of $3.0\eps$ is a control---no policy violates it because
-the trace's natural maximum is $2.01\eps$---which confirms that the baseline
-violations at tighter caps come from the key and not from the accounting.
+global accounting. The cap of $3.0\eps$ is a control: no policy violates it, since the trace's
+natural maximum is $2.01\eps$.
 
 \begin{table}[tb]
 \centering

@@ -56,8 +56,19 @@ error is exactly zero at 2.1\,MB; it is not the configuration we deploy.
 The estimator costs 27--32\,$\mu$s per request across widths from $2^{10}$ to
 $2^{16}$, against 4.6\,$\mu$s for an exact table on the same trace: an 18\% rise
 for a sixteen-fold increase in width, as expected from eight memory accesses per
-update plus the hot-table lookup. Against a millisecond-scale query the accountant
-is 1--3\% of the budget.
+update plus the hot-table lookup. The full admission path is slower and far more
+variable (E17): median 74\,$\mu$s, mean 223\,$\mu$s, p99 5.6\,ms over
+12{,}000 requests. Profiling attributes 46\% to the sketch and cost algebra, 14\%
+to the ledger, 12\% to the controller and 7\% to the accountant. The tail is one
+function, a tenant-pressure sweep that scans the hot table every 64 admissions:
+disabling it drops the mean to 108\,$\mu$s and the p99 to 0.47\,ms, so the sweep
+costs half the throughput and all of the tail.
+
+A single-server queue over these service times gives the deployment picture. At
+50\% utilisation the median is 0.17\,ms but the p99 is 107\,ms, because one 5.6\,ms
+event stalls everything behind it; at 80\% the median is already 5.2\,ms. A load
+averaging 50\% that peaks at five times capacity for half a second makes the median
+0.93\,s. The path must be provisioned for its peak, not its mean.
 
 Memory tells the opposite story at small scale. For $5{,}000$ subjects the sketch
 occupies 5.57\,MB at width $2^{14}$ while the exact table occupies 1.28\,MB, so the

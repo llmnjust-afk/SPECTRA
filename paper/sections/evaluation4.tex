@@ -10,10 +10,10 @@ breaker can only admit or refuse, costs 4.2 points of availability (0.881 agains
 17.4\,MB without moving it either: on 1{,}500 subjects the hot table holds everyone
 who matters.
 
-Churn is the cost the capacity sweep hides (E14). Rotating 400 new heavy subjects
+Churn is the cost the capacity sweep hides (E14): rotating 400 new heavy subjects
 per epoch raises the mean over-estimate from 0.16 to 0.28 at a $0.15\eps$ cap and
 from 0.25 to 0.65 at $1.0\eps$, and the p99 from 1.7$\times$ to 2.5$\times$ and
-2.2$\times$ to 5.1$\times$; at the tight cap it costs 4.5 points of availability.
+2.2$\times$ to 5.1$\times$, at 4.5 points of availability.
 Safety is untouched---zero violations in 30 runs---because an evicted subject is
 re-seeded from the sketch upper bound; but the table stops paying for itself,
 bounding what it can buy against an adversary who chooses the traffic.
@@ -29,19 +29,16 @@ monitor.
 The last row is the honest comparison, and it is less comfortable than it
 suggests. At 1{,}500 subjects exact cumulative accounting matches \sys's
 availability within a point ($0.898$ against $0.906$ at $1.0\eps$; $0.713$ against
-$0.721$ at $0.5\eps$) with 0.38\,MB against 5.0\,MB. Its 19\,$\mu$s per request is
-not a like-for-like cost, since it runs no breaker, coordinator or window; the price
-of those is measured on the estimator alone in Section~\ref{sec:eval-cost}. A windowed exact accountant is likewise implementable, and
-we built one to check (E16, 600\,s window): at $0.5\eps$ it admits every request,
-because no subject crosses the window cap, while six of 1{,}500 subjects exceed
-their \emph{lifetime} cap. Windowed enforcement bounds a window, not a lifetime.
+$0.721$ at $0.5\eps$) with 0.38\,MB against 5.0\,MB. Its 19\,$\mu$s per request is not
+a like-for-like cost: it runs no breaker, coordinator or window. A windowed exact accountant is likewise implementable (E16, 600\,s window): at
+$0.5\eps$ it admits every request, because no subject crosses the window cap, while
+six of 1{,}500 subjects exceed their \emph{lifetime} cap. Windowed enforcement bounds a window, not a lifetime.
 \sys's case therefore rests neither on windows being inexpressible nor on exact
 tabulation being slow at $10^{3}$ subjects, but on $10^{6}$ subjects, where the table
 is 265\,MB (Figure~\ref{fig:scale}).
 
-Stability is measured on a load oscillating around the throttle threshold: with
-hysteresis and dwell the breaker makes zero transitions, and without them 26, 13 of
-which are de-escalations followed by immediate re-escalation.
+On a load oscillating around the threshold, hysteresis and dwell give the breaker
+zero transitions, and without them 26, 13 of them reversals.
 
 \subsection{Why zCDP and Not R\'enyi DP}
 \label{sec:eval-backend}
@@ -50,20 +47,19 @@ The choice of composition algebra is usually a matter of tightness. For admissio
 control it is a matter of solvability. An R\'enyi accountant evaluates a discrete
 grid of orders and converts to $(\eps,\delta)$; the conversion has a floor at
 $\log(1/\delta)/(\alpha_{\max}-1)$, which for $\delta=10^{-5}$ and
-$\alpha_{\max}=512$ is $0.0225$. A tenant asking for $\eps_q{=}0.02$ is therefore
-below the floor, and no noise scale on this grid certifies the target. Our R\'enyi
-implementation saturates at its noise cap of $\sigma=1000$, 4.17 times the scale
-zCDP computes, and reports a per-charge $\eps$ of 0.023 with
-\texttt{reached\_target} false rather than silently accepting the query. Basic
+$\alpha_{\max}=512$ is $0.0225$. A tenant asking for $\eps_q{=}0.02$ is below that floor, so no noise scale on
+this grid certifies the target: our R\'enyi implementation saturates at its noise
+cap of $\sigma=1000$, 4.17 times the scale zCDP computes, and reports a per-charge
+$\eps$ of 0.023 with \texttt{reached\_target} false rather than accepting the
+query. Basic
 composition, which sums $\eps$, needs $\sigma=240$ for the same target but reports
 $0.2008$ after 100 charges, ten times the budget zCDP reports. At
 $\eps_q{=}0.1$ the three backends agree to within 0.004\% in $\sigma$ and in the
 composed $\eps$ (1.0195 for zCDP, 1.0194 for R\'enyi), and at $\eps_q{=}0.5$ to
-within 0.006\%. The conclusion is narrow: for the per-query budgets a market prices,
-closed-form zCDP is the only one of the three that both calibrates the mechanism and
-composes it without discarding an order of magnitude. R\'enyi DP remains the right
-tool for training-time accounting at larger budgets, where its constants win; it is
-the wrong tool for admission at $\eps_q{=}0.02$.
+within 0.006\%. The conclusion is narrow: at market per-query budgets, zCDP is the only backend
+that both calibrates the mechanism and composes it without discarding an order of
+magnitude. R\'enyi DP remains right for training-time accounting at larger budgets,
+and wrong for admission at $\eps_q{=}0.02$.
 
 \subsection{What Soundness Costs in Utility}
 \label{sec:eval-utility}

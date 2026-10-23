@@ -50,9 +50,8 @@ the charge itself a two-phase transaction keyed by the subject across platforms.
 \emph{Approximate counting.} Count-Min sketches and their conservative variants are
 well understood~\cite{fusy2023countmin,fusy2022phase}, including on power-law
 streams, and learned variants reduce error at the same width~\cite{nishishita2025optimized}.
-Our use is unfashionable: we want not the smallest error but an error with a known
-sign, which rules out unbiased estimators and makes the conservative update the
-right primitive rather than an optimisation.
+We want not the smallest error but an error with a known sign, which rules out
+unbiased estimators and makes conservative update the right primitive.
 
 \emph{Mechanisms.} We assume only that each query exposes a cost vector, which is
 what every mechanism we price provides: DP synthesis~\cite{saha2024dpcda}, spectral

@@ -1,11 +1,11 @@
 \subsection{Settlement and Concurrency}
 \label{sec:eval-concurrency}
 
-The settlement invariants are checked directly: a repeated commit charges once, a
-timeout releases the reservation, a repeated reserve returns the same reservation and
-cannot be re-bound to another tenant, a crash between reserve and commit leaves no
-double spend, and an expired reservation is recovered. All five pass. We report them because the failure they prevent is invisible in aggregate
-statistics: a lost charge only makes the next query admissible. In
+Five settlement invariants are checked directly and all pass: a repeated commit
+charges once, a timeout releases, a repeated reserve returns the same reservation and
+cannot be re-bound, a crash between reserve and commit leaves no double spend, and an
+expired reservation is recovered. Their failure mode is invisible in aggregates: a lost charge only makes the next
+query admissible. In
 the atomicity test, 16 threads issue 3{,}200 attempts against a subject whose cap
 funds exactly 100 charges; every thread count from 2 to 16 admits exactly 100, spends
 exactly $1.0\eps$, and records zero violations, so check-and-reserve is atomic in
@@ -21,8 +21,8 @@ second against 25.2k for the global lock, a factor of 3.6, because a transaction
 now waits only for the stripes it touches (E13, medians of three repetitions). Striping removes a serialisation point, not contention: a market whose traffic
 concentrates on a few subjects will not benefit from it.
 
-Threads cannot carry the coordinator past one interpreter, so we also served it
-over loopback TCP to separate client processes. One client sustains 1.9k
+Threads cannot carry the coordinator past one interpreter, so we also served it over
+loopback TCP to separate clients. One client sustains 1.9k
 reserve-and-commit pairs per second at a median round trip of 201\,$\mu$s; four
 clients sustain 2.4k at 283\,$\mu$s with a p99 of 16\,ms. The server saturates,
 so the limit is the coordinator's interpreter rather than the transport: a
